@@ -7,6 +7,7 @@ class Product(models.Model):
     quantity = models.IntegerField("Quantity",)
     price = models.FloatField("Price",)
     category = models.ForeignKey(Category, related_name ='products')
+    image_url = models.URLField("Image URL")
 
     def __unicode__(self):  # Python 3: def __str__(self):
         return self.name

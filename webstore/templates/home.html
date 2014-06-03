@@ -3,7 +3,9 @@
 
 {% block content %}
     
-    sdas
+    {% for prod in products %}
+    	    {% include "home_product.html" with header="Latest Posts from the blog" product=prod %}
+    {% endfor %}	
     
     
 {% endblock content %}

@@ -11,4 +11,7 @@ def index(request):
 def home(request):
     products = Product.objects.all()
     context = { "products" : products}
+    print context
+    for product in context['products']:
+        print product
     return render(request, "home.html", context)

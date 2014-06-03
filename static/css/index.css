@@ -5,5 +5,19 @@ body {
 
 .navbar {
   margin-bottom: 20px;
-  background-color:grey;
+  background-color:#F7F7F7;
+}
+
+.product_title {
+	text-align: center;
+	font-size: 2em;
+}
+
+.product {
+	background-color:#F7F7F7;	
+	margin-right: 15px;
+}
+
+.thumbnail {
+	
 }
