@@ -44,15 +44,18 @@
               <li><a href="#">Link</a></li>
             </ul>
             <ul class="nav navbar-nav navbar-right">
-              <li class="active"><a href="./">Default</a></li>
-              <li><a href="../navbar-static-top/">Static top</a></li>
-              <li><a href="../navbar-fixed-top/">Fixed top</a></li>
+            {% if user.is_authenticated %}
+                <li><a href="{% url 'store_logout' %}">Logout</a></li>
+            {% else %}
+                <li class="active"><a href="{% url 'register' %}">Register</a></li>
+                <li><a href="{% url 'store_login' %}">Login</a></li>  
+            {% endif %}
             </ul>
           </div><!--/.nav-collapse -->
         </div><!--/.container-fluid -->
       </div>
 
-      <!-- Main component for a primary marketing message or call to action -->
+      <!-- Main component for a primary marketing message or call to action 
       <div class="jumbotron">
         <h1>Navbar example</h1>
         <p>This example is a quick exercise to illustrate how the default, static navbar and fixed to top navbar work. It includes the responsive CSS and HTML, so it also adapts to your viewport and device.</p>
@@ -60,6 +63,7 @@
           <a class="btn btn-lg btn-primary" href="../../components/#navbar" role="button">View navbar docs &raquo;</a>
         </p>
       </div>
+     --> 
 
 {% block featured_products %}
 {% endblock featured_products %}
