@@ -2,7 +2,7 @@
 <div class="col-md-4">
 	<div class="product">
 		<div class="product_title">
-			<b><a href="{% url 'store:product_details' prod_id=product.id %}">{{product.name}}</a> </b>
+			<b><a href="{% url 'webstore:product_details' prod_id=product.id %}">{{product.name}}</a> </b>
 		</div>
 		<div class="thumbnail">
 			<a href=""><img src="{{product.image_url}}" ></a>

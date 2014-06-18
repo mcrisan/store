@@ -33,13 +33,12 @@ class CartForm(Form):
     
     def clean_prod_id(self):
         product_id = int(self.cleaned_data['prod_id'])
-        if Product.objects.filter(id=product_id).exists():
+        if not Product.objects.filter(id=product_id).exists():
             raise ValidationError("Product does not exist")
         return product_id  
     
     def clean(self):
         form_data = self.cleaned_data
-        print form_data
         prod = Product.objects.get(pk=form_data['prod_id'])
         if prod.quantity < form_data['qty']:
             self._errors['qty'] = "Quantity is to big"
@@ -72,9 +71,7 @@ class ProductRatingsForm(Form):
     prod_id = IntegerField() 
     
     def clean_prod_id(self):
-        print "cleaning"
         data = self.data
-        print data
         ids = data.getlist('prod_id')
         for product_id in ids:
             if not Product.objects.filter(id=product_id).exists():

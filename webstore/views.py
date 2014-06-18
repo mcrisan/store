@@ -9,11 +9,21 @@ from django.contrib import messages
 from django.contrib.auth.signals import user_logged_in
 from django.contrib.auth.decorators import login_required
 from django.db.models import Count
+from datetime import timedelta
+from django.db.models import Sum, Max, Avg
 
 from .forms import RegisterForm, CartForm, RatingForm, ProductRatingsForm 
 from .models import Cart, Product, Rating
 
 def home(request):
+    #Cart.objects.filter(cart_products_set.aggregate(Max('date_added')))
+    date=datetime.datetime.now()+timedelta(days=-1)
+    carts = Cart.objects.annotate(total=Max('cart_products__date_added')).filter(total__gt= date).all()
+    print carts
+    for cart in carts:
+        for prod in cart.cart_products_set.all():
+            print 1
+    #ipdb.set_trace()
     products = Product.objects.order_by('name').all()
     context = { "products" : products, "type" : 2}
     return render(request, "home.html", context)
@@ -89,14 +99,14 @@ def register(request):
         form = RegisterForm() 
     return render(request, "register.html", {'form': form})
 
-@login_required
+#@login_required
 def create_cart(request):
     form = CartForm(data=request.POST)
     if form.is_valid():
         data=request.POST
         quantity = int(data['qty'])
         product_id = int(data['prod_id'])
-        current_user = request.user
+        current_user = get_user(request)    
         cart = Cart.from_user(current_user)
         prod, prod_cart = cart.check_product_cart(product_id, quantity)
         context ={"price": prod_cart.price,
@@ -116,9 +126,8 @@ def checkout(request):
             cart.save()      
     return redirect('store_home')
 
-@login_required
 def delete_prod(request, prod_id):
-    current_user = request.user
+    current_user = get_user(request)
     cart =Cart.objects.filter(user=current_user, status='0').first()
     if cart:
         prod = cart.cart_products_set.filter(product__id=prod_id).first()
@@ -145,13 +154,38 @@ def order_details(request, cart_id):
         return redirect('store_home')                                 
     return render(request, "order_details.html", {'products': products})
 
-@login_required
 def load_sidebar_cart(request):
     context = {}      
-    current_user = request.user
+    current_user = get_user(request)
     if current_user.cart_set.count()>0:
         if current_user.cart_set.last().status == '0':
             cart = current_user.cart_set.last()    
             context['price'] = cart.cart_amount() 
             context['prod'] = cart.cart_products_set.all()   
     return context
+
+def get_user(request):
+    if request.user.is_authenticated():
+        current_user = request.user
+    else:
+        current_user = User.objects.filter(username=request.session['user_id']).first()
+        if not current_user:
+            current_user = User(username=request.session['user_id'], first_name='Anonymous', last_name='User')
+            current_user.set_unusable_password()
+            current_user.save()
+    return current_user 
+
+def save_cart(sender, user, request, **kwargs):
+    guest_user = User.objects.filter(username=request.session['user_id']).first()
+    current_user = request.user    
+    if guest_user.cart_set.exists():
+        cart = Cart.from_user(current_user)
+        cart_prod = guest_user.cart_set.first().cart_products_set.all()
+        for prod in cart_prod:
+            cart.check_product_cart(prod.product.id, prod.quantity)
+            product = Product.objects.get(pk = prod.product.id)
+            product.modify_quantity(0 - prod.quantity)
+        guest_user.cart_set.first().delete()
+    
+
+user_logged_in.connect(save_cart)   
