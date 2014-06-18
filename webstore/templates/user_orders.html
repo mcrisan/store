@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% load staticfiles %}
+
+{% block content %}
+<h2>View your completed orders</h2>
+	<div class="row">
+		<div class="col-md-2">Nr</div>
+		<div class="col-md-2">Quantity</div>
+		<div class="col-md-2">Products</div>
+		<div class="col-md-2">Price</div>
+		<div class="col-md-2">Date</div>
+	</div>
+    {% for c in cart %}
+    <div class="row">
+    	 <div class="col-md-2">{{forloop.counter}}</div>
+    	 <div class="col-md-2">{{c.cart_quantity}}</div>
+    	 <div class="col-md-2">{{c.cart_nr_products}}</div>
+    	 <div class="col-md-2">{{c.cart_amount}}</div>
+    	 <div class="col-md-2">{{c.cart_latest_update}}</div>
+    	 <div class="col-md-2"><a href="{% url 'store:order_details'  cart_id=c.id %}">Details</a></div>
+    </div>
+    {% endfor %}	
+    
+    
+{% endblock content %}

@@ -1,0 +1,23 @@
+{% if user.is_authenticated %} 
+<div class="cart_details container-fluid">
+	 <div class="cart_title"> Your cart details </div>
+	 {% for product in prod %}
+		 	<div class="row {% cycle 'white' 'black'%}" data-id="{{product.product.id}}">
+			 	<div class="col-md-1">{{forloop.counter}}</div>
+			 	<div class="col-md-3">{{product.product.name}}</div>
+			 	<div class="col-md-1 quant"><span class="quantity">{{product.quantity}}</span> <span class="edit" data-prod="{{product.product.id}}" data-qty="{{product.product.quantity}}" >E</span><span class="input_qty"></span></div>
+			 	<div class="col-md-2 price">{{product.price}}</div>
+			 	<div class="col-md-1"><a href="{% url 'store:delete_prod'  prod_id=product.product.id %}">X</a></div>
+		 	</div>
+	 {% empty %}
+	 	<div class="row">Your cart is empty</div>
+	 {% endfor %}
+	 {% if prod %}
+		 <div class="total col-md-offset-6">Total: {{price}}</div>
+		 <br/>
+		 <div>
+		 	<a class="col-md-12 btn-info" href="{% url 'store:checkout' %}">Checkout</a>
+		 </div>
+	 {% endif %}
+ </div>
+{% endif %}

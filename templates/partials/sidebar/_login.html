@@ -1,0 +1,22 @@
+<div class="side_login">
+	<form role="form" class="form-horizontal" method="post" action="{% url 'store_login' %}">
+		    {% csrf_token %}
+		    <!-- Text input-->
+			<div class="form-group">
+			  <label class="control-label col-md-4" for="id_username">Username:</label>
+			  <div class="col-md-8">
+			    <input id="id_username" name="username" placeholder="Username" class="form-control" type="text" required>
+			  </div>
+			</div>
+			
+			<!-- Password input-->
+			<div class="form-group">
+			  <label class="control-label col-md-4" for="id_password">Password:</label>
+			  <div class="controls col-md-8">
+			    <input id="id_password" name="password" placeholder="Password" class="form-control" type="password" required>
+			  </div>
+			</div>
+		    <input class=" col-md-offset-5 btn btn-primary" type="submit" value="Login" />
+		    <input type="hidden" name="next" value="{{ next }}" />
+	</form>
+</div>	

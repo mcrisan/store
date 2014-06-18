@@ -8,57 +8,14 @@ from django.db import models
 class Migration(SchemaMigration):
 
     def forwards(self, orm):
-        # Adding model 'Category'
-        db.create_table(u'webstore_category', (
-            (u'id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
-            ('name', self.gf('django.db.models.fields.CharField')(max_length=50)),
-        ))
-        db.send_create_signal(u'webstore', ['Category'])
 
-        # Adding model 'Product'
-        db.create_table(u'webstore_product', (
-            (u'id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
-            ('name', self.gf('django.db.models.fields.CharField')(max_length=100)),
-            ('quantity', self.gf('django.db.models.fields.IntegerField')()),
-            ('price', self.gf('django.db.models.fields.FloatField')()),
-            ('category', self.gf('django.db.models.fields.related.ForeignKey')(related_name='products', to=orm['webstore.Category'])),
-            ('image_url', self.gf('django.db.models.fields.URLField')(max_length=200)),
-        ))
-        db.send_create_signal(u'webstore', ['Product'])
-
-        # Adding model 'Cart'
-        db.create_table(u'webstore_cart', (
-            (u'id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
-            ('user', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['auth.User'])),
-            ('status', self.gf('django.db.models.fields.BooleanField')()),
-        ))
-        db.send_create_signal(u'webstore', ['Cart'])
-
-        # Adding model 'Cart_Products'
-        db.create_table(u'webstore_cart_products', (
-            (u'id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
-            ('product', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['webstore.Product'])),
-            ('cart', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['webstore.Cart'])),
-            ('quantity', self.gf('django.db.models.fields.IntegerField')()),
-            ('price', self.gf('django.db.models.fields.FloatField')()),
-            ('date_added', self.gf('django.db.models.fields.DateField')()),
-        ))
-        db.send_create_signal(u'webstore', ['Cart_Products'])
-
+        # Changing field 'Cart.status'
+        db.alter_column(u'webstore_cart', 'status', self.gf('django.db.models.fields.CharField')(max_length=1))
 
     def backwards(self, orm):
-        # Deleting model 'Category'
-        db.delete_table(u'webstore_category')
 
-        # Deleting model 'Product'
-        db.delete_table(u'webstore_product')
-
-        # Deleting model 'Cart'
-        db.delete_table(u'webstore_cart')
-
-        # Deleting model 'Cart_Products'
-        db.delete_table(u'webstore_cart_products')
-
+        # Changing field 'Cart.status'
+        db.alter_column(u'webstore_cart', 'status', self.gf('django.db.models.fields.BooleanField')())
 
     models = {
         u'auth.group': {
@@ -101,7 +58,7 @@ class Migration(SchemaMigration):
             'Meta': {'object_name': 'Cart'},
             u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'products': ('django.db.models.fields.related.ManyToManyField', [], {'to': u"orm['webstore.Product']", 'through': u"orm['webstore.Cart_Products']", 'symmetrical': 'False'}),
-            'status': ('django.db.models.fields.BooleanField', [], {}),
+            'status': ('django.db.models.fields.CharField', [], {'default': "'0'", 'max_length': '1'}),
             'user': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['auth.User']"})
         },
         u'webstore.cart_products': {

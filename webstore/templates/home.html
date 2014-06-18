@@ -1,11 +1,31 @@
 {% extends "base.html" %}
+{% load staticfiles %}
 
+{% block styling %}
+	{{ block.super }}
+	<link rel="stylesheet" href="{% static 'rating/jquery.raty.css' %}"> 
+{% endblock styling %}
 
 {% block content %}
-    
+<div class="col-md-5">Sort by: 
+	<a href="{% url 'sort_by_name' type=type %}">name</a> | 
+	<a href="{% url 'sort_by_popularity' type=type %}">popularity</a>
+	{% if type == 1 %}
+		<span>Ascending</span>
+	{% elif type == 0 %}
+		<span>Descending</span>
+	{% endif %}		
+</div>
+    <div class="error col-md-12"></div>
     {% for prod in products %}
-    	    {% include "home_product.html" with header="Latest Posts from the blog" product=prod %}
+    	    {% include "home_product.html" with product=prod %}
     {% endfor %}	
     
     
 {% endblock content %}
+
+{% block myscript %}
+	<script src="{% static 'script/cart.js' %}"></script>
+	<script src="{% static 'rating/jquery.raty.js' %}"></script>
+	<script src="{% static 'rating/home_rating.js' %}"></script>
+{% endblock myscript %}

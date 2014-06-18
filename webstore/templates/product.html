@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% load staticfiles %}
+{% block styling %}
+	{{ block.super }}
+	<link rel="stylesheet" href="{% static 'rating/jquery.raty.css' %}"> 
+{% endblock styling %}
+{% block content %}
+<div class="col-md-12 center"><h2>{{product.name}}</h2></div>
+<div class="col-md-6">
+<a href=""><img class="product_thumbnail" src="{{product.image_url}}" ></a>
+</div>
+<div class="col-md-6">
+		<div class="product_details">
+			<span>Price: {{product.price}} </span><br/>
+			<span>Qty: <input class="quant" type="text" required> </span> </br>
+			<span>Stock: <span id="stock{{product.id}}">{{product.quantity}}</span> </span><br/>
+			<span>Total orders: {{product.total_orders}}</span><br/>
+			<span>Total quantity ordered: {{product.quantity_ordered}}</span><br/>
+			<div class="col-md-4 rating_label">Rating: </div><div id ="{{product.id}}" data-rate=0 class="rating col-md-7"></div><br/><br/>
+			<span><button data-prod="{{product.id}}" data-qty="{{product.quantity}}" class="col-md-12 cart ">Add to cart</button> </span> <br/>
+			<span class="error"></span>
+		</div>
+</div>
+
+{% endblock content %}
+
+{% block myscript %}
+	<script src="{% static 'script/cart.js' %}"></script>
+	<script src="{% static 'rating/jquery.raty.js' %}"></script>
+	<script src="{% static 'rating/home_rating.js' %}"></script>
+{% endblock myscript %}
