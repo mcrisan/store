@@ -17,6 +17,7 @@ from .models import Cart, Product, Rating, DeliveryDetails, options
 from .tasks import send_order_email
 
 def home(request, page=1):
+    print request.session['user_id']
     products = Product.objects.order_by('name').all()
     prod = Paginator(products, options.products_per_page)
     context = { "products" : prod.page(page), "type" : 2, "page_nr" : page}
@@ -203,8 +204,8 @@ def search(request):
 
 def load_sidebar_cart(request):
     context = {}      
-    current_user = get_user(request)
-    if current_user.cart_set.count()>0:
+    current_user = check_user(request)
+    if hasattr(current_user, 'cart_set') and current_user.cart_set.count()>0:
         if current_user.cart_set.last().status == '0':
             cart = current_user.cart_set.last()    
             context['price'] = cart.cart_amount() 
@@ -217,18 +218,22 @@ def load_sidebar_search(request):
     return context
 
 def get_user(request):
+    current_user = check_user(request)
+    if not current_user:
+        current_user = User(username=request.session['user_id'][0:15], first_name='Anonymous', last_name=request.session['user_id'][15:])
+        current_user.set_unusable_password()
+        current_user.save()
+    return current_user 
+
+def check_user(request):
     if request.user.is_authenticated():
         current_user = request.user
     else:
-        current_user = User.objects.filter(username=request.session['user_id']).first()
-        if not current_user:
-            current_user = User(username=request.session['user_id'], first_name='Anonymous', last_name='User')
-            current_user.set_unusable_password()
-            current_user.save()
+        current_user = User.objects.filter(username=request.session['user_id'][0:15], last_name=request.session['user_id'][15:]).first()
     return current_user 
 
 def save_cart(sender, user, request, **kwargs):
-    guest_user = User.objects.filter(username=request.session['user_id']).first()
+    guest_user = User.objects.filter(username=request.session['user_id'][0:15], last_name=request.session['user_id'][15:]).first()
     current_user = request.user    
     if guest_user.cart_set.exists():
         cart = Cart.from_user(current_user)
@@ -237,7 +242,7 @@ def save_cart(sender, user, request, **kwargs):
             cart.check_product_cart(prod.product.id, prod.quantity)
             product = Product.objects.get(pk = prod.product.id)
             product.modify_quantity(0 - prod.quantity)
-        guest_user.cart_set.first().delete()
+        guest_user.delete()
     
 
 user_logged_in.connect(save_cart)   

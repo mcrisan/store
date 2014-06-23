@@ -139,7 +139,6 @@ class Cart(models.Model):
         return date_created['date_added__max'] 
     
     def create_order(self):
-        #cart =Cart.objects.filter(user=current_user, status='0').first()
         self.status = '1'
         self.save() 
                       

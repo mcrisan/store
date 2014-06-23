@@ -27,9 +27,7 @@ class UserEditForm(ModelForm):
         fields = ("first_name", "last_name", "email") 
         
 class SearchForm(Form):
-    query = CharField(max_length=100)         
-
-       
+    query = CharField(max_length=100)               
  
         
 class DeliveryDetailsForm(ModelForm):    
