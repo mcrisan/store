@@ -1,0 +1,18 @@
+Hello <strong>{{ user.username }}</strong>,
+	This are the products you ordered:
+<table>
+<tr>
+	<th>Name</th>
+	<th>Quantity</th>
+	<th>Price</th>
+</tr>
+{% for prod in products %}
+	<tr>
+		<td>{{prod.product.name}}</td>
+		<td>{{prod.quantity}}</td>
+		<td>{{prod.price}}</td>
+	</tr>
+{% endfor %}
+</table>	
+<h3>Total price: {{price}}</h3>	
+Your order should arrive in about 5 days.		

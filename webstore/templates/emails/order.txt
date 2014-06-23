@@ -1,0 +1,7 @@
+Hello {{ user.username }},
+	This are the products you ordered:
+{% for prod in products %}
+	{{prod.product.name}}	{{prod.quantity}}	{{prod.price}}
+{% endfor %}
+Total price: {{price}}	
+Your order should arrive in about 5 days.		

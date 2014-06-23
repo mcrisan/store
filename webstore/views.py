@@ -14,8 +14,10 @@ from django.db.models import Count
 from .forms import RegisterForm, CartForm, RatingForm, ProductRatingsForm , DeliveryDetailsForm, \
                    UserEditForm, SearchForm
 from .models import Cart, Product, Rating, DeliveryDetails, options
+from .tasks import send_order_email
 
 def home(request, page=1):
+    send_order_email.delay(request.user)
     products = Product.objects.order_by('name').all()
     prod = Paginator(products, options.products_per_page)
     context = { "products" : prod.page(page), "type" : 2, "page_nr" : page}
@@ -145,6 +147,7 @@ def checkout(request):
     if cart:
         cart.create_order()
         messages.add_message(request, messages.INFO, 'Your order was created')
+        send_order_email.delay(current_user.id)
         return redirect('webstore:order_details', cart_id=cart.id)
     else:
         messages.add_message(request, messages.INFO, 'We could not create your order order')
