@@ -1,7 +1,10 @@
+{% extends "base.html" %}
+{% load staticfiles %}
 
+{% block content %}
 <div class="cart_details container-fluid">
 	 <div class="cart_title"> Your cart details </div>
-	 {% for product in prod %}
+	 {% for product in cart.cart_products_set.all %}
 		 	<div class="row {% cycle 'white' 'black'%}" data-id="{{product.product.id}}">
 			 	<div class="col-md-1">{{forloop.counter}}</div>
 			 	<div class="col-md-3">{{product.product.name}}</div>
@@ -13,10 +16,13 @@
 	 	<div class="row">Your cart is empty</div>
 	 {% endfor %}
 	 {% if prod %}
-		 <div class="total col-md-offset-6">Total: {{price}}</div>
+		 <div class="total col-md-offset-6">Total: {{cart.cart_amount}}</div>
 		 <br/>
 		 <div>
-		 	<a class="col-md-12 btn-info" href="{% url 'webstore:delivery_details' %}">Checkout</a>
+		 	<a class="col-md-12 btn-info" href="{% url 'webstore:checkout' %}">Confirm order</a>
 		 </div>
 	 {% endif %}
- </div>
+ </div>	
+    
+    
+{% endblock content %}

@@ -4,7 +4,12 @@ import ipdb
 from django.db import models
 from django.db.models import Sum, Max, Avg
 from django.contrib.auth.models import User
+from django.contrib.sites.models import Site
+from phonenumber_field.modelfields import PhoneNumberField
 
+from store.site_settings import SiteSettings
+
+options = SiteSettings('Site Settings')
 STATUS_CHOICES = (
     ('0', 'Active'),
     ('1', 'Ordered'),
@@ -132,6 +137,11 @@ class Cart(models.Model):
     def cart_latest_update(self):
         date_created = self.cart_products_set.aggregate(Max('date_added'))
         return date_created['date_added__max'] 
+    
+    def create_order(self):
+        #cart =Cart.objects.filter(user=current_user, status='0').first()
+        self.status = '1'
+        self.save() 
                       
             
 class Cart_Products(models.Model):
@@ -144,4 +154,29 @@ class Cart_Products(models.Model):
     class Meta:
         verbose_name = "product in cart"
 
-          
+
+class DeliveryDetails(models.Model):
+    address = models.CharField("Name", max_length=100)
+    phonenumber = PhoneNumberField()
+    user = models.ForeignKey(User)
+    cart = models.ForeignKey(Cart)
+
+    def __unicode__(self):
+        return self.address
+    
+    @staticmethod
+    def from_user(user):
+        cart = user.cart_set.filter(status='0').first()
+        instance = DeliveryDetails.objects.filter(user=user, cart=cart).first()
+        if not instance:
+            instance = DeliveryDetails(user=user, cart=cart)
+        return instance  
+    
+    @classmethod
+    def latest_delivery_from_user(self, user):
+        delivery = self.objects.filter(user=user).last()
+        if delivery:
+            details = {'address':delivery.address , 'phonenumber':delivery.phonenumber}  
+        else:
+            details = {'address': "" , 'phonenumber':""} 
+        return details       

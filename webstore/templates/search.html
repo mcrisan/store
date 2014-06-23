@@ -7,23 +7,13 @@
 {% endblock styling %}
 
 {% block content %}
-<div class="col-md-5">Sort by: 
-	<a href="{% url 'sort_by_name' type=type %}">name</a> | 
-	<a href="{% url 'sort_by_popularity' type=type %}">popularity</a>
-	{% if type == 1 %}
-		<span>Ascending</span>
-	{% elif type == 0 %}
-		<span>Descending</span>
-	{% endif %}		
-</div>
+<h3>Results for search term: {{query}}</h3>
 <div class="error col-md-12"></div>
 <div class="row">
-	 {% for prod in products.object_list %}
+	 {% for prod in products %}
 	    {% include "home_product.html" with product=prod %}
 	 {% endfor %}
 </div>
-
-{% include "partials/_pagination.html" with address='store_home_pag' page=products page_nr=page_nr %}
 
     
 {% endblock content %}

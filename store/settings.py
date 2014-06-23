@@ -9,7 +9,13 @@ https://docs.djangoproject.com/en/1.6/ref/settings/
 """
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
+from __future__ import absolute_import
 import os
+import djcelery
+
+from .celery import app as celery_app
+
+djcelery.setup_loader()
 BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 
 
@@ -32,11 +38,14 @@ ALLOWED_HOSTS = []
 INSTALLED_APPS = (
     'django.contrib.admin',
     'django.contrib.auth',
+    'django.contrib.sites',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'south',
+    'dbsettings',
+    'djcelery',
     'webstore',
 )
 
@@ -81,7 +90,7 @@ USE_I18N = True
 
 USE_L10N = True
 
-USE_TZ = True
+USE_TZ = False
 
 
 # Static files (CSS, JavaScript, Images)
@@ -102,6 +111,17 @@ TEMPLATE_CONTEXT_PROCESSORS = (
     "django.core.context_processors.static",
     "django.core.context_processors.tz",
     "django.contrib.messages.context_processors.messages",
-    "webstore.views.load_sidebar_cart"
+    "webstore.views.load_sidebar_cart",
+    "webstore.views.load_sidebar_search"
 )
+
+SITE_ID = 1
+
+#celery
+celery_app.conf.update(
+    #CELERY_RESULT_BACKEND='djcelery.backends.cache:CacheBackend',
+    BROKER_URL = 'redis://localhost:6379/0',
+    CELERY_RESULT_BACKEND = 'redis://localhost:6379/0',
+)
+CELERYBEAT_SCHEDULER = 'djcelery.schedulers.DatabaseScheduler'
 

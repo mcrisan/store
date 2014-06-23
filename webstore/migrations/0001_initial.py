@@ -26,11 +26,20 @@ class Migration(SchemaMigration):
         ))
         db.send_create_signal(u'webstore', ['Product'])
 
+        # Adding model 'Rating'
+        db.create_table(u'webstore_rating', (
+            (u'id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
+            ('value', self.gf('django.db.models.fields.IntegerField')()),
+            ('product', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['webstore.Product'])),
+            ('user', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['auth.User'])),
+        ))
+        db.send_create_signal(u'webstore', ['Rating'])
+
         # Adding model 'Cart'
         db.create_table(u'webstore_cart', (
             (u'id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
             ('user', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['auth.User'])),
-            ('status', self.gf('django.db.models.fields.BooleanField')()),
+            ('status', self.gf('django.db.models.fields.CharField')(default='0', max_length=1)),
         ))
         db.send_create_signal(u'webstore', ['Cart'])
 
@@ -45,6 +54,16 @@ class Migration(SchemaMigration):
         ))
         db.send_create_signal(u'webstore', ['Cart_Products'])
 
+        # Adding model 'DeliveryDetails'
+        db.create_table(u'webstore_deliverydetails', (
+            (u'id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
+            ('address', self.gf('django.db.models.fields.CharField')(max_length=100)),
+            ('phonenumber', self.gf('phonenumber_field.modelfields.PhoneNumberField')(max_length=128)),
+            ('user', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['auth.User'])),
+            ('cart', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['webstore.Cart'])),
+        ))
+        db.send_create_signal(u'webstore', ['DeliveryDetails'])
+
 
     def backwards(self, orm):
         # Deleting model 'Category'
@@ -53,11 +72,17 @@ class Migration(SchemaMigration):
         # Deleting model 'Product'
         db.delete_table(u'webstore_product')
 
+        # Deleting model 'Rating'
+        db.delete_table(u'webstore_rating')
+
         # Deleting model 'Cart'
         db.delete_table(u'webstore_cart')
 
         # Deleting model 'Cart_Products'
         db.delete_table(u'webstore_cart_products')
+
+        # Deleting model 'DeliveryDetails'
+        db.delete_table(u'webstore_deliverydetails')
 
 
     models = {
@@ -101,7 +126,7 @@ class Migration(SchemaMigration):
             'Meta': {'object_name': 'Cart'},
             u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'products': ('django.db.models.fields.related.ManyToManyField', [], {'to': u"orm['webstore.Product']", 'through': u"orm['webstore.Cart_Products']", 'symmetrical': 'False'}),
-            'status': ('django.db.models.fields.BooleanField', [], {}),
+            'status': ('django.db.models.fields.CharField', [], {'default': "'0'", 'max_length': '1'}),
             'user': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['auth.User']"})
         },
         u'webstore.cart_products': {
@@ -118,6 +143,14 @@ class Migration(SchemaMigration):
             u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'name': ('django.db.models.fields.CharField', [], {'max_length': '50'})
         },
+        u'webstore.deliverydetails': {
+            'Meta': {'object_name': 'DeliveryDetails'},
+            'address': ('django.db.models.fields.CharField', [], {'max_length': '100'}),
+            'cart': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['webstore.Cart']"}),
+            u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'phonenumber': ('phonenumber_field.modelfields.PhoneNumberField', [], {'max_length': '128'}),
+            'user': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['auth.User']"})
+        },
         u'webstore.product': {
             'Meta': {'object_name': 'Product'},
             'category': ('django.db.models.fields.related.ForeignKey', [], {'related_name': "'products'", 'to': u"orm['webstore.Category']"}),
@@ -126,6 +159,13 @@ class Migration(SchemaMigration):
             'name': ('django.db.models.fields.CharField', [], {'max_length': '100'}),
             'price': ('django.db.models.fields.FloatField', [], {}),
             'quantity': ('django.db.models.fields.IntegerField', [], {})
+        },
+        u'webstore.rating': {
+            'Meta': {'object_name': 'Rating'},
+            u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'product': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['webstore.Product']"}),
+            'user': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['auth.User']"}),
+            'value': ('django.db.models.fields.IntegerField', [], {})
         }
     }
 

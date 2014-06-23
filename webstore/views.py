@@ -8,41 +8,40 @@ from django.contrib.auth.models import User
 from django.contrib import messages
 from django.contrib.auth.signals import user_logged_in
 from django.contrib.auth.decorators import login_required
+from django.core.paginator import Paginator
 from django.db.models import Count
-from datetime import timedelta
-from django.db.models import Sum, Max, Avg
 
-from .forms import RegisterForm, CartForm, RatingForm, ProductRatingsForm 
-from .models import Cart, Product, Rating
+from .forms import RegisterForm, CartForm, RatingForm, ProductRatingsForm , DeliveryDetailsForm, \
+                   UserEditForm, SearchForm
+from .models import Cart, Product, Rating, DeliveryDetails, options
 
-def home(request):
-    #Cart.objects.filter(cart_products_set.aggregate(Max('date_added')))
-    date=datetime.datetime.now()+timedelta(days=-1)
-    carts = Cart.objects.annotate(total=Max('cart_products__date_added')).filter(total__gt= date).all()
-    print carts
-    for cart in carts:
-        for prod in cart.cart_products_set.all():
-            print 1
-    #ipdb.set_trace()
+def home(request, page=1):
     products = Product.objects.order_by('name').all()
-    context = { "products" : products, "type" : 2}
+    prod = Paginator(products, options.products_per_page)
+    context = { "products" : prod.page(page), "type" : 2, "page_nr" : page}
     return render(request, "home.html", context)
 
-def sort_by_name(request, type):
-    if type == '0':
+def sort_by_name(request, type, page=1):
+    if type == 'ASC':
         products = Product.objects.order_by('name').all()
+        new_type = 'DESC'
     else:
-        products = Product.objects.order_by('-name').all()  
-    context = { "products" : products, 'type' : int(not int(type))}
-    return render(request, "home.html", context)
+        products = Product.objects.order_by('-name').all() 
+        new_type = 'ASC'
+    prod = Paginator(products, options.products_per_page)   
+    context = { "products" : prod.page(page), 'type' : new_type, 'old_type' : type, "page_nr" : page}
+    return render(request, "home_sort_by_name.html", context)
 
-def sort_by_popularity(request, type):
-    if type == '0':
+def sort_by_popularity(request, type, page=1):
+    if type == 'ASC':
         products = Product.objects.annotate(num_orders=Count('cart_products')).order_by('num_orders').all()
+        new_type = 'DESC'
     else:
-        products = Product.objects.annotate(num_orders=Count('cart_products')).order_by('-num_orders').all()  
-    context = { "products" : products, 'type' : int(not int(type))}
-    return render(request, "home.html", context)
+        products = Product.objects.annotate(num_orders=Count('cart_products')).order_by('-num_orders').all()
+        new_type = 'ASC' 
+    prod = Paginator(products, options.products_per_page)  
+    context = { "products" : prod.page(page), 'type' : new_type, 'old_type' : type, "page_nr" : page}
+    return render(request, "home_sort_by_popularity.html", context)
 
 def product_details(request, prod_id):
     try:
@@ -117,14 +116,40 @@ def create_cart(request):
     return HttpResponse(json.dumps(context), content_type="application/json") 
 
 @login_required
+def delivery_details(request):
+    current_user = request.user
+    instance = DeliveryDetails.from_user(current_user)  
+    if request.method == 'POST':       
+        form = DeliveryDetailsForm(data=request.POST, instance=instance)
+        if form.is_valid():
+            form.save()
+            return redirect('webstore:review_order')
+    else:
+        details = DeliveryDetails.latest_delivery_from_user(current_user)
+        form = DeliveryDetailsForm(initial=details)
+    return render(request, "delivery_details.html", {'form': form})
+
+@login_required
+def review_order(request):
+    current_user = request.user
+    cart = current_user.cart_set.filter(status='0').first()
+    if cart:
+        return render(request, "review_order.html", {'cart':cart})
+    else:
+        return redirect('store_home')
+
+@login_required
 def checkout(request):
-    if request.user.is_authenticated():
-        current_user = request.user
-        cart =Cart.objects.filter(user=current_user, status='0').first()
-        if cart:
-            cart.status = '1'
-            cart.save()      
-    return redirect('store_home')
+    current_user = request.user
+    cart = current_user.cart_set.filter(status='0').first()
+    if cart:
+        cart.create_order()
+        messages.add_message(request, messages.INFO, 'Your order was created')
+        return redirect('webstore:order_details', cart_id=cart.id)
+    else:
+        messages.add_message(request, messages.INFO, 'We could not create your order order')
+        return redirect('store_home')
+
 
 def delete_prod(request, prod_id):
     current_user = get_user(request)
@@ -154,6 +179,27 @@ def order_details(request, cart_id):
         return redirect('store_home')                                 
     return render(request, "order_details.html", {'products': products})
 
+def edit_account(request):
+    current_user = request.user 
+    if request.method == 'POST':       
+        form = UserEditForm(data=request.POST, instance=current_user)
+        if form.is_valid():
+            form.save()
+            return redirect('store_home')
+    else:
+        form = UserEditForm(instance=current_user) 
+    return render(request, 'edit_user.html',{'form':form})
+
+def search(request):
+    if request.method == 'POST':       
+        form = SearchForm(data=request.POST)
+        if form.is_valid():
+            products = Product.objects.filter(name__icontains=form.data['query'])
+            context = { "products" : products, "query" : form.data['query']}
+            return render(request, "search.html", context)
+    else: 
+        return redirect('store_home')
+
 def load_sidebar_cart(request):
     context = {}      
     current_user = get_user(request)
@@ -162,6 +208,11 @@ def load_sidebar_cart(request):
             cart = current_user.cart_set.last()    
             context['price'] = cart.cart_amount() 
             context['prod'] = cart.cart_products_set.all()   
+    return context
+
+def load_sidebar_search(request):     
+    form = SearchForm() 
+    context = {'form' : form} 
     return context
 
 def get_user(request):

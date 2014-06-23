@@ -28,12 +28,14 @@ class ProductAdmin(admin.ModelAdmin):
     list_display = ('name', 'quantity', 'price', 'quantity_ordered', 'total_orders', 'product_rating')
     search_fields = ['name']
     inlines = [RatingInline]
+
   
     
 class CartAdmin(admin.ModelAdmin):
     model = Cart
     list_display = ('user','cart_amount', 'cart_quantity', 'cart_nr_products', 'cart_latest_update', 'status')
-    inlines = [Cart_Products]    
+    inlines = [Cart_Products]   
+    list_filter = ('status', )
 
 
 admin.site.register(Category, CategoryAdmin)

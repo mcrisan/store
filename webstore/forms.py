@@ -5,7 +5,7 @@ from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Submit
 
 from webstore.models import Product
-from .models import Cart, Rating
+from .models import Cart, Rating, DeliveryDetails
 
 
 class RegisterForm(UserCreationForm):
@@ -18,7 +18,24 @@ class RegisterForm(UserCreationForm):
      
     class Meta:
         model = User
-        fields = ("first_name", "last_name", 'username', 'password1')    
+        fields = ("first_name", "last_name", 'username', 'password1') 
+   
+        
+class UserEditForm(ModelForm):
+    class Meta:
+        model = User 
+        fields = ("first_name", "last_name", "email") 
+        
+class SearchForm(Form):
+    query = CharField(max_length=100)         
+
+       
+ 
+        
+class DeliveryDetailsForm(ModelForm):    
+    class Meta:
+        model = DeliveryDetails 
+        fields = ("address", "phonenumber")            
   
   
 class CartForm(Form): 

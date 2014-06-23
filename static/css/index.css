@@ -48,6 +48,10 @@ body {
 	float:right
 }
 
+.search_form{
+	margin-bottom: 69px;
+}
+
 .side_login{
 	background-color:#F7F7F7;
 	margin-bottom: 69px;
