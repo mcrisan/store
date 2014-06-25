@@ -15,6 +15,7 @@
               
             </ul>
             <ul class="nav navbar-nav navbar-right">
+                <li><a href="{% url 'webstore:offers' %}">Offers</a></li>
             {% if user.is_authenticated %}
             	<li><a href="{% url 'edit_account' %}">Edit Account</a></li>
             	<li><a href="{% url 'webstore:orders' %}">Orders</a></li>

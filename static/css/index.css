@@ -89,7 +89,32 @@ body {
 	font-size: 1.5em;
 	text-align: center;
 }
+/* product */
 
 .thumbnail {
-	
+	position: relative;
+}
+
+.thumbnail .discount_image{
+	position: absolute;
+    top: 0px;
+    right: 0px;
+    background-color:red;
+    min-height: 35px;
+    min-width: 70px;
+    -moz-border-radius: 30px;
+	border-radius: 30px;
+	color: white;
+	font-size: 1.5em;
+	text-align:center;
+}
+
+.list-price{
+	text-decoration:line-through;
+	font-weight:bold;
+}
+
+.discount_price{
+	color: red;
+	font-size: 1.25em;
 }

@@ -13,11 +13,10 @@ from django.db.models import Count
 
 from .forms import RegisterForm, CartForm, RatingForm, ProductRatingsForm , DeliveryDetailsForm, \
                    UserEditForm, SearchForm
-from .models import Cart, Product, Rating, DeliveryDetails, options
+from .models import Cart, Product, Rating, DeliveryDetails, Discount, options
 from .tasks import send_order_email
 
 def home(request, page=1):
-    print request.session['user_id']
     products = Product.objects.order_by('name').all()
     prod = Paginator(products, options.products_per_page)
     context = { "products" : prod.page(page), "type" : 2, "page_nr" : page}
@@ -192,6 +191,19 @@ def edit_account(request):
         form = UserEditForm(instance=current_user) 
     return render(request, 'edit_user.html',{'form':form})
 
+def offers(request):
+    offers =Discount.objects.filter(status='0')
+    return render(request, "offers.html", {'offers':offers})
+
+def offer_details(request, offer_id):
+    try:
+        offer =Discount.objects.get(pk=offer_id)
+    except Discount.DoesNotExist:
+        messages.add_message(request, messages.INFO, 'We could not find the offer')
+        return redirect('webstore:offers')    
+    return render(request, "offer_details.html", {'offer':offer})
+
+
 def search(request):
     if request.method == 'POST':       
         form = SearchForm(data=request.POST)
@@ -229,20 +241,24 @@ def check_user(request):
     if request.user.is_authenticated():
         current_user = request.user
     else:
-        current_user = User.objects.filter(username=request.session['user_id'][0:15], last_name=request.session['user_id'][15:]).first()
+        try:
+            current_user = User.objects.filter(username=request.session['user_id'][0:15], last_name=request.session['user_id'][15:]).first()
+        except KeyError:
+           current_user=None 
     return current_user 
 
 def save_cart(sender, user, request, **kwargs):
     guest_user = User.objects.filter(username=request.session['user_id'][0:15], last_name=request.session['user_id'][15:]).first()
-    current_user = request.user    
-    if guest_user.cart_set.exists():
-        cart = Cart.from_user(current_user)
-        cart_prod = guest_user.cart_set.first().cart_products_set.all()
-        for prod in cart_prod:
-            cart.check_product_cart(prod.product.id, prod.quantity)
-            product = Product.objects.get(pk = prod.product.id)
-            product.modify_quantity(0 - prod.quantity)
-        guest_user.delete()
+    if guest_user:
+        current_user = request.user    
+        if guest_user.cart_set.exists():
+            cart = Cart.from_user(current_user)
+            cart_prod = guest_user.cart_set.first().cart_products_set.all()
+            for prod in cart_prod:
+                cart.check_product_cart(prod.product.id, prod.quantity)
+                product = Product.objects.get(pk = prod.product.id)
+                product.modify_quantity(0 - prod.quantity)
+            guest_user.delete()
     
 
 user_logged_in.connect(save_cart)   

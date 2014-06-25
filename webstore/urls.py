@@ -15,4 +15,6 @@ urlpatterns = patterns('',
     url(r'^product_rating', views.product_rating, name='product_rating'),
     url(r'^search', views.search, name='search'),
     url(r'^search/page(?P<page>[0-9]+)/$', views.search, name='search_pag'),
+    url(r'^offers', views.offers, name='offers'),
+    url(r'^offer_details/(?P<offer_id>\d+)/$', views.offer_details, name='offer_details'),
 )

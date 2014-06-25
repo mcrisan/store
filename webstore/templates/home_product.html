@@ -5,12 +5,26 @@
 			<b><a href="{% url 'webstore:product_details' prod_id=product.id %}">{{product.name}}</a> </b>
 		</div>
 		<div class="thumbnail">
-			<a href=""><img src="{{product.image_url}}" ></a>
+			{% if product.discount > 0 %}
+				<div class="discount_image">-{{product.discount}}%</div>
+			{% endif %}	
+			<a href=""><img src="{{product.image_url}}" class="product_image" ></a>
 		</div>
 		<div class="product_details">
-			<span>Price: {{product.price}} </span>
-			<span class="qty">Qty: <input class="quant" type="text" required> </span> </br>
-			<span>Stock: <span id="stock{{product.id}}">{{product.quantity}}</span> </span><br/>
+			{% if product.discount > 0 %}
+				<span>Price: 
+					<span class="list-price">{{product.price}}</span> 
+					<span class="discount_price">{{product.discounted_price}}</span>
+				</span>
+			{% else %}
+				<span>Price: {{product.price}} </span>
+			{% endif %} 
+			<span class="qty">Qty: 
+				<input class="quant" type="text" required> 
+			</span> </br>
+			<span>Stock: 
+				<span id="stock{{product.id}}">{{product.quantity}}</span> 
+			</span><br/>
 			<div class="col-md-4 rating_label">Rating: </div><div id ="{{product.id}}" data-rate=0 class="rating col-md-7"></div><br/><br/>
 			<span><button data-prod="{{product.id}}" data-qty="{{product.quantity}}" class="col-md-12 cart ">Add to cart</button> </span> <br/>
 			<span class="error"></span>

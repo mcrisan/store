@@ -1,0 +1,69 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_static %}
+{% block extrahead %}{{ block.super }}
+{% endblock %}
+
+{% block extrastyle %}
+  {{ block.super }}
+  <link rel="stylesheet" href="{% static 'bootstrap/css/bootstrap.min.css' %}">
+  <link rel="stylesheet" href="{% static 'css/admin.css' %}">
+  <script src="{% static 'jquery-2.0.3.min.js' %}"></script>
+  <script src="{% static 'bootstrap/js/bootstrap.min.js' %}"></script>
+{% endblock %}
+
+{% block bodyclass %}{{ opts.app_label }}-{{ opts.object_name.lower }} change-form{% endblock %}
+
+{% if not is_popup %}
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+<a href="{% url 'admin:index' %}">{% trans 'Home' %}</a>
+&rsaquo; {% trans 'User Orders' %}
+</div>
+{% endblock %}
+{% endif %}
+
+{% block content %}
+<h3>Order details for user {{user.username}}</h3>
+<div class="row left">
+	<div class="col-md-6">
+		<div><b>Registered at:</b> {{user.date_joined}}</div>
+		<div><b>Last logged in at:</b> {{user.last_login}}</div>
+		<div><b>Number of orders:</b> {{user.orders|length}}</div>
+		<div><b>First order at:</b> {{user.first_order}}</div>
+	</div>
+	<div class="col-md-6">
+		<div><b>Money spent:</b> {{user.money_spent}}</div>
+		<div><b>Number of products ordered:</b> {{user.products_ordered}}</div>
+		<div><b>Offers claimed:</b> {{user.offers_claimed|length}}</div>
+		<div><b>Last order at:</b> {{user.latest_order}}</div>
+	</div>
+</div>
+<h4 class="left">User's orders</h4>
+<div class="left">
+ {% for order in user.orders %}
+ 	<div class="row {% cycle 'row1' 'row2' %}">
+ 	  <div class="row">
+ 	    <div class="col-md-2">{{forloop.counter}}. Order details:</div>
+ 		<div class="col-md-2">Date: {{order.cart_latest_update}}</div>
+ 		<div class="col-md-2">Nr Products: {{order.cart_nr_products}}</div>
+ 		<div class="col-md-2">Price: {{order.cart_amount}}</div>
+ 	  </div><br/>
+ 	  <div class="row">
+ 		<div class ="col-md-offset-1 col-md-1">Products:</div>
+ 		<div class ="col-md-2">Name</div>
+ 		<div class ="col-md-2">Quantity</div>
+ 		<div class ="col-md-2">Price</div>
+ 		<div class ="col-md-2">Date Added</div>
+ 	  </div>
+ 	  {% for prod in order.cart_products_set.all %}
+ 	  	<div class="row">
+ 			<div class ="col-md-offset-2 col-md-2">{{prod.product.name}}</div>
+ 			<div class ="col-md-2">{{prod.quantity}}</div>
+ 			<div class ="col-md-2">{{prod.price}}</div>
+ 			<div class ="col-md-2">{{prod.date_added}}</div>
+ 	  </div>
+ 	  {% endfor %}
+ 	</div><br/><br/>
+ {% endfor %}
+</div>
+{% endblock %}

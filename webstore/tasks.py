@@ -10,7 +10,7 @@ from django.core.mail import EmailMultiAlternatives
 from django.template.loader import get_template
 from django.template import Context
 
-from webstore.models import Cart, Product, User, options as opt
+from webstore.models import Cart, Product, User, Discount, options as opt
 from store.settings import EMAIL_HOST_USER
 
 @shared_task
@@ -22,6 +22,8 @@ def removecart():
         for prod in cart.cart_products_set.all():
             product = Product.objects.get(pk = prod.product.id)
             product.modify_quantity(0 - prod.quantity)
+        for prod_disc in cart.discountedproducts_set.all():
+            prod_disc.delete()    
         cart.delete()
         
 @shared_task
@@ -45,4 +47,23 @@ def send_order_email(to_user):
     msg = EmailMultiAlternatives(subject, text_content, EMAIL_HOST_USER, [to_user.email])
     msg.attach_alternative(html_content, "text/html")
     msg.send()
+    
+@shared_task
+def start_promotions():
+    print "start discounts"
+    date=datetime.datetime.now().date()
+    discounts = Discount.objects.filter(start_date__gte=date, end_date__gte=date).exclude(status='0').all()
+    for discount in discounts:
+        discount.status='0' 
+        discount.save()  
+        
+@shared_task
+def stop_promotions():
+    print "stop discounts"
+    date=datetime.datetime.now().date()
+    discounts = Discount.objects.filter(end_date__lt=date, status='0').all()
+    for discount in discounts:
+        if discount.end_date is not None:
+            discount.status='2' 
+            discount.save()         
         

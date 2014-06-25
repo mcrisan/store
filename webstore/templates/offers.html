@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% load staticfiles %}
+
+{% block content %}
+<h2>View our current offers</h2>
+
+    {% for offer in offers %}
+    <div class="row">
+    	 <div class="col-md-12"><h3>{{forloop.counter}}. {{offer.name}}</h3></div>
+    	  <div class="col-md-12">This offer starts in: {{offer.start_date}} and ends in {{offer.end_date}}</div>
+    	  <div class="col-md-12">{{offer.description}}</div> 
+    	 <div class="col-md-4">Current status: <b>{{offer.offer_status}}</b></div>
+    	 <div class="col-md-4">Discount: <b>{{offer.percent}}%</b></div>
+    	 <div class="col-md-4"><a href="{% url 'webstore:offer_details' offer_id=offer.id %}">View Eligible Products</a></div>
+    	   	
+    </div>
+    {% endfor %}	
+    
+    
+{% endblock content %}

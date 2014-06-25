@@ -1,0 +1,58 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_static %}
+{% block extrahead %}{{ block.super }}
+{% endblock %}
+{% block extrastyle %}
+  {{ block.super }}
+  <link rel="stylesheet" href="{% static 'bootstrap/css/bootstrap.min.css' %}">
+  <link rel="stylesheet" href="{% static 'css/admin.css' %}">
+  <script src="{% static 'jquery-2.0.3.min.js' %}"></script>
+  <script src="{% static 'bootstrap/js/bootstrap.min.js' %}"></script>
+{% endblock %}
+{% block bodyclass %}{{ opts.app_label }}-{{ opts.object_name.lower }} change-form{% endblock %}
+{% if not is_popup %}
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+<a href="{% url 'admin:index' %}">{% trans 'Home' %}</a>
+&rsaquo; {% trans 'User Statistics' %}
+</div>
+{% endblock %}
+{% endif %}
+
+
+{% block content %}
+<h3>Store details</h3>
+<div class="row left">
+	<div class="col-md-6">
+		<div><b>Num. of orders:</b> {{number_orders}}</div>
+		<div><b>Num. of products:</b> {{products_ordered}}</div>
+		<div><b>Total price:</b> {{orders_price}}</div>
+	</div>
+	<div class="col-md-6">
+		<div><b>Average price/order:</b> {{average_price_order}}</div>
+		<div><b>Average items/order:</b> {{average_items_order}}</div>
+		<div><b>Average orders/user:</b> {{average_orders_user}}</div>
+	</div>
+</div>
+<h4 class="left">User Orders details</h4>
+<div class="content">
+	<div class="row">
+ 		<div class="col-md-2">User</div>
+ 		<div class="col-md-2">Total Orders</div>
+ 		<div class="col-md-2">Money Spent</div>
+ 		<div class="col-md-2">Products Ordered</div>
+ 		<div class="col-md-2">Last Order</div>
+ 		<div class="col-md-2">More Details</div>
+ 	</div>
+ {% for user in users %}
+ 	<div class="row {% cycle 'row1' 'row2' %}">
+ 		<div class="col-md-2">{{user.username}}</div>
+ 		<div class="col-md-2">{{user.orders|length}}</div>
+ 		<div class="col-md-2">{{user.money_spent}}</div>
+ 		<div class="col-md-2">{{user.products_ordered}}</div>
+ 		<div class="col-md-2">{{user.latest_order}}</div>
+ 		<div class="col-md-2"><a href="{% url 'user_data' user_id=user.id %}">More Details</a></div>
+ 	</div>
+ {% endfor %}
+</div>
+{% endblock %}

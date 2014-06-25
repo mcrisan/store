@@ -1,6 +1,6 @@
 /* set equal height thumbnail images*/
 $(document).ready(function(){
-	$('.thumbnail img').css({
-	    'height': $('.thumbnail img').height()
+	$('.thumbnail .product_image').css({
+	    'height': $('.thumbnail .product_image').height()
 	});
 });

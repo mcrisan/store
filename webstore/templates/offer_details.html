@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% load staticfiles %}
+
+{% block content %}
+<h3>View products in {{offer.name}}</h3>
+
+<div class="error col-md-12"></div>
+<div class="row">
+	 {% for product in offer.products.all %}
+	    {% include "home_product.html" with product=product %}
+	 {% endfor %}
+</div>	
+    
+    
+{% endblock content %}
