@@ -11,12 +11,14 @@ from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.db.models import Count
 
-from .forms import RegisterForm, CartForm, RatingForm, ProductRatingsForm , DeliveryDetailsForm, \
-                   UserEditForm, SearchForm
+from .forms import (RegisterForm, CartForm, RatingForm, ProductRatingsForm , 
+                   DeliveryDetailsForm, UserEditForm, SearchForm)
 from .models import Cart, Product, Rating, DeliveryDetails, Discount, options
 from .tasks import send_order_email
+from .choices import s, get_field_choices, Status
 
 def home(request, page=1):
+    stat = Status()
     products = Product.objects.order_by('name').all()
     prod = Paginator(products, options.products_per_page)
     context = { "products" : prod.page(page), "type" : 2, "page_nr" : page}
@@ -30,18 +32,26 @@ def sort_by_name(request, type, page=1):
         products = Product.objects.order_by('-name').all() 
         new_type = 'ASC'
     prod = Paginator(products, options.products_per_page)   
-    context = { "products" : prod.page(page), 'type' : new_type, 'old_type' : type, "page_nr" : page}
+    context = {'products' : prod.page(page), 
+               'type' : new_type, 
+               'old_type' : type, 
+               'page_nr' : page}
     return render(request, "home_sort_by_name.html", context)
 
 def sort_by_popularity(request, type, page=1):
     if type == 'ASC':
-        products = Product.objects.annotate(num_orders=Count('cart_products')).order_by('num_orders').all()
+        products = (Product.objects.annotate(num_orders=Count('cart_products'))
+                                  .order_by('num_orders').all())
         new_type = 'DESC'
     else:
-        products = Product.objects.annotate(num_orders=Count('cart_products')).order_by('-num_orders').all()
+        products = (Product.objects.annotate(num_orders=Count('cart_products'))
+                                  .order_by('-num_orders').all())
         new_type = 'ASC' 
     prod = Paginator(products, options.products_per_page)  
-    context = { "products" : prod.page(page), 'type' : new_type, 'old_type' : type, "page_nr" : page}
+    context = { 'products' : prod.page(page),
+                'type' : new_type, 
+                'old_type' : type, 
+                'page_nr' : page}
     return render(request, "home_sort_by_popularity.html", context)
 
 def product_details(request, prod_id):
@@ -58,13 +68,11 @@ def rate_product(request):
     form = RatingForm(data=request.POST)
     if form.is_valid():
         data=request.POST
-        rating = int(data['rating'])
-        prod_id = int(data['prod_id'])
         current_user = request.user
-        if current_user.cart_set.filter(products__id=prod_id, status='1').exists():
-            rate = Rating.create_rate(current_user, prod_id, rating)
+        if current_user.cart_set.filter(products__id=data['prod_id'], status='1').exists():
+            rate = Rating.create_rate(current_user, data['prod_id'], data['rating'])
             rate.save()
-        avg_rate = Rating.from_product(prod_id)
+        avg_rate = Rating.from_product(data['prod_id'])
         context ={"rate": avg_rate} 
     else:
         context ={"mes": "Data is not valid"}      
@@ -80,7 +88,8 @@ def product_rating(request):
             rate = prod.product_rating()
             current_user = request.user
             try:
-                enable = current_user.cart_set.filter(products__id=prod_id, status='1').exists()
+                enable = (current_user.cart_set.filter(products__id=prod_id, status='1')
+                                              .exists())
             except AttributeError:
                 enable = False    
             context = {"rate": rate,
@@ -103,14 +112,12 @@ def create_cart(request):
     form = CartForm(data=request.POST)
     if form.is_valid():
         data=request.POST
-        quantity = int(data['qty'])
-        product_id = int(data['prod_id'])
         current_user = get_user(request)    
         cart = Cart.from_user(current_user)
-        prod, prod_cart = cart.check_product_cart(product_id, quantity)
+        prod, prod_cart = cart.check_product_cart(int(data['prod_id']), int(data['qty']))
         context ={"price": prod_cart.price,
-                 "quantity": quantity,
-                 "prod_id": product_id,
+                 "quantity": data['qty'],
+                 "prod_id": data['prod_id'],
                  "stock" : prod.quantity,
                  "total_price" : cart.cart_amount()}   
     return HttpResponse(json.dumps(context), content_type="application/json") 
@@ -174,7 +181,8 @@ def user_orders(request):
 def order_details(request, cart_id):
     current_user = request.user
     try:
-        products =Cart.objects.filter(id=cart_id, user=request.user, status='1').first().cart_products_set.all()
+        products = (Cart.objects.filter(id=cart_id, user=request.user, status='1')
+                              .first().cart_products_set.all())
     except AttributeError:
         messages.add_message(request, messages.INFO, 'We could not find the required order')
         return redirect('store_home')                                 
@@ -232,7 +240,9 @@ def load_sidebar_search(request):
 def get_user(request):
     current_user = check_user(request)
     if not current_user:
-        current_user = User(username=request.session['user_id'][0:15], first_name='Anonymous', last_name=request.session['user_id'][15:])
+        current_user = User(username=request.session['user_id'][0:15], 
+                            first_name='Anonymous', 
+                            last_name=request.session['user_id'][15:])
         current_user.set_unusable_password()
         current_user.save()
     return current_user 
@@ -242,13 +252,16 @@ def check_user(request):
         current_user = request.user
     else:
         try:
-            current_user = User.objects.filter(username=request.session['user_id'][0:15], last_name=request.session['user_id'][15:]).first()
+            current_user = (User.objects.filter(username=request.session['user_id'][0:15], 
+                                                last_name=request.session['user_id'][15:])
+                                       .first())
         except KeyError:
            current_user=None 
     return current_user 
 
 def save_cart(sender, user, request, **kwargs):
-    guest_user = User.objects.filter(username=request.session['user_id'][0:15], last_name=request.session['user_id'][15:]).first()
+    guest_user = User.objects.filter(username=request.session['user_id'][0:15], 
+                                     last_name=request.session['user_id'][15:]).first()
     if guest_user:
         current_user = request.user    
         if guest_user.cart_set.exists():

@@ -25,6 +25,7 @@ class UserEditForm(ModelForm):
     class Meta:
         model = User 
         fields = ("first_name", "last_name", "email") 
+  
         
 class SearchForm(Form):
     query = CharField(max_length=100)               

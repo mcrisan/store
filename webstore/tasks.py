@@ -17,7 +17,8 @@ from store.settings import EMAIL_HOST_USER
 def removecart():
     print "removing carts"
     date=datetime.datetime.now()-timedelta(days=opt.remove_cart)
-    carts = Cart.objects.annotate(total=Max('cart_products__date_added')).filter(total__lt=date, status='0').all()
+    carts = (Cart.objects.annotate(total=Max('cart_products__date_added'))
+                        .filter(total__lt=date, status='0').all())
     for cart in carts:
         for prod in cart.cart_products_set.all():
             product = Product.objects.get(pk = prod.product.id)
@@ -39,7 +40,7 @@ def send_order_email(to_user):
     products =to_user.cart_set.filter(status='1').last().cart_products_set.all()
     cart_amount = to_user.cart_set.filter(status='1').last().cart_amount()
     plaintext = get_template('emails/order.txt')
-    htmly     = get_template('emails/order.html')
+    htmly = get_template('emails/order.html')
     d = Context({ 'products': products, 'user': to_user, 'price': cart_amount })
     subject="We have received your order"
     text_content = plaintext.render(d)
@@ -52,7 +53,8 @@ def send_order_email(to_user):
 def start_promotions():
     print "start discounts"
     date=datetime.datetime.now().date()
-    discounts = Discount.objects.filter(start_date__gte=date, end_date__gte=date).exclude(status='0').all()
+    discounts = (Discount.objects.filter(start_date__gte=date, end_date__gte=date)
+                                .exclude(status='0').all())
     for discount in discounts:
         discount.status='0' 
         discount.save()  

@@ -5,7 +5,11 @@ from django.contrib import admin
 from django import forms
 from django.shortcuts import render, redirect
 from django.contrib.auth.models import User
+from django.contrib.auth.admin import UserAdmin
 from django.contrib.admin.views.decorators import staff_member_required
+from django.core.urlresolvers import reverse
+from django.core import urlresolvers
+from django.contrib.contenttypes.models import ContentType
 
 from .models import Category, Product, Cart, Cart_Products, Rating, Discount, UserMethods
 
@@ -27,6 +31,7 @@ class DiscountForm(forms.ModelForm):
             if self.cleaned_data['start_date'] > self.cleaned_data['end_date']:
                 raise forms.ValidationError("End date must be higher than start date")
             return self.cleaned_data['end_date'] 
+  
         
 class ProductForm(forms.ModelForm):
     class Meta:
@@ -51,7 +56,6 @@ class RatingForm(forms.ModelForm):
             raise forms.ValidationError("Rating must be between 1 and 5")
         return self.cleaned_data['value']            
       
- 
 
 class ProductInline(admin.TabularInline):
     model = Product
@@ -77,10 +81,12 @@ class CategoryAdmin(admin.ModelAdmin):
 
 
 class ProductAdmin(admin.ModelAdmin):
-    list_display = ('name', 'quantity', 'price', 'quantity_ordered', 'total_orders', 'product_rating')
+    list_display = ('name', 'quantity', 'price', 
+                    'quantity_ordered', 'total_orders', 'product_rating')
     search_fields = ['name']
     inlines = [RatingInline]
     form = ProductForm
+
 
 class DiscountAdmin(admin.ModelAdmin):
     list_display = ('name', 'percent', 'start_date', 'end_date', 'status')
@@ -91,11 +97,58 @@ class DiscountAdmin(admin.ModelAdmin):
     
 class CartAdmin(admin.ModelAdmin):
     model = Cart
-    list_display = ('user','cart_amount', 'cart_quantity', 'cart_nr_products', 'cart_latest_update', 'status')
+    list_display = ('user','cart_amount', 'cart_quantity', 'cart_nr_products', 
+                    'cart_latest_update', 'status')
     inlines = [Cart_Products]   
     list_filter = ('status', )
+    
+class UserMethodsAdmin(admin.ModelAdmin):
+    model = UserMethods
+    actions = None
+    list_display = ('username', 'money_spent', 'products_ordered', 'latest_order', 'first_order')  
+     
+    def has_add_permission(self, request):
+        # Nobody is allowed to add
+        return False
+    
+    def has_delete_permission(self, request, obj=None):
+        # Nobody is allowed to delete
+        return False
+    
+    def __init__(self, *args, **kwargs):
+        super(UserMethodsAdmin, self).__init__(*args, **kwargs)
+        self.list_display_links = (None, ) 
 
+    #readonly_fields = ('money_spent', 'products_ordered', 'latest_order', 'first_order')
+    #readonly_fields = User._meta.get_all_field_names()
+    
+#    def has_change_permission(self, request, obj=None):
+#        return False
+    
+class CustomUserAdmin(UserAdmin):
+    model = UserMethods
+    
+    def view_link(self,obj):
+      url = reverse('user_data', kwargs={'user_id': obj.id})
+      return u"<a href='{0}'>View</a>".format(url)
+    view_link.short_description = 'View Details'
+    view_link.allow_tags = True
+    
+    def get_admin_url(self,obj):
+        url = reverse("admin:webstore_usermethods_changelist")
+        return u"<a href='{0}'>View</a>".format(url)
+    get_admin_url.short_description = 'View Details'
+    get_admin_url.allow_tags = True
+    
+    def queryset(self, request):
+        return self.model.objects.all().exclude(first_name='Anonymous')
+    
+    list_display = ('username', 'email', 'first_name', 'last_name', 'is_active', 'date_joined', 'is_staff', 'get_admin_url')
+   
 
+admin.site.unregister(User)
+admin.site.register(User, CustomUserAdmin)
+admin.site.register(UserMethods, UserMethodsAdmin)
 admin.site.register(Category, CategoryAdmin)
 admin.site.register(Product, ProductAdmin)
 admin.site.register(Cart, CartAdmin)

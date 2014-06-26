@@ -9,12 +9,17 @@ from phonenumber_field.modelfields import PhoneNumberField
 from django.core.validators import MaxLengthValidator
 
 from store.site_settings import SiteSettings
+from .choices import s, get_field_choices
 
 options = SiteSettings('Site Settings')
 STATUS_CHOICES = (
     ('0', 'Active'),
     ('1', 'Ordered'),
 )
+discount_status={"active" : 0, "pending" : 1, "finished" : 2}
+ACTIVE = 0
+PENDING = 1
+FINISHED = 2
 
 DISCOUNT_STATUS_CHOICES = (
     ('0', 'Active'),
@@ -37,33 +42,39 @@ class UserMethods(User):
             return 0.0
     
     def products_ordered(self):
-        products_ordered = self.cart_set.filter(status='1').aggregate(total=Sum('cart_products__quantity'))
+        products_ordered = (self.cart_set.filter(status='1') 
+                                         .aggregate(total=Sum('cart_products__quantity')))
         if products_ordered['total']:
             return products_ordered['total']
         else:
             return 0
         
     def latest_order(self):
-        latest_order = self.cart_set.filter(status='1').aggregate(latest=Max('cart_products__date_added'))
+        latest_order = (self.cart_set.filter(status='1') 
+                                     .aggregate(latest=Max('cart_products__date_added')))
         if latest_order['latest']:
             return latest_order['latest']
         else:
             return "Not Ordered" 
         
     def first_order(self):
-        first_order = self.cart_set.filter(status='1').aggregate(latest=Min('cart_products__date_added'))
+        first_order = (self.cart_set.filter(status='1') 
+                                    .aggregate(latest=Min('cart_products__date_added')))
         if first_order['latest']:
             return first_order['latest']
         else:
             return "Not Ordered" 
         
     def offers_claimed(self):
-        offers = self.cart_set.filter(status='1', discountedproducts__quantity__gt =0).annotate(dcount=Count('discountedproducts__cart'))
+        offers = (self.cart_set.filter(status='1', 
+                                      discountedproducts__quantity__gt =0) 
+                               .annotate(dcount=Count('discountedproducts__cart')))
         return offers        
             
 
     class Meta:
         proxy=True
+        #app_label = 'auth'
 
 
 class Category(models.Model):
@@ -126,7 +137,7 @@ class Discount(models.Model):
     end_date = models.DateField(default=datetime.datetime.now(), null=True, blank=True)
     products = models.ManyToManyField(Product)
     status = models.CharField(max_length=1,
-                              choices=DISCOUNT_STATUS_CHOICES,
+                              choices=get_field_choices(s),
                               default='1')
     def __unicode__(self):
         return self.name 
@@ -178,7 +189,8 @@ class CartManager(models.Manager):
     
     @staticmethod
     def total_products_ordered():
-        total_orders = Cart.objects.filter(status='1').aggregate(total=Sum('cart_products__quantity'))
+        total_orders = (Cart.objects.filter(status='1')
+                           .aggregate(total=Sum('cart_products__quantity')))
         return total_orders['total']
       
     
@@ -268,9 +280,14 @@ class DiscountedProducts(models.Model):
      
      @staticmethod
      def add_product(discount, product, cart, quantity):
-        disc_prod = DiscountedProducts.objects.filter(discount=discount, product=product, cart=cart).first()
+        disc_prod = DiscountedProducts.objects.filter(discount=discount, 
+                                                      product=product, 
+                                                      cart=cart).first()
         if not disc_prod:
-            disc_prod = DiscountedProducts(discount=discount, product=product, cart=cart, quantity=quantity)
+            disc_prod = DiscountedProducts(discount=discount, 
+                                           product=product, 
+                                           cart=cart, 
+                                           quantity=quantity)
             disc_prod.save()
         else:
             disc_prod.quantity = quantity 
