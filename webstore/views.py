@@ -15,10 +15,9 @@ from .forms import (RegisterForm, CartForm, RatingForm, ProductRatingsForm ,
                    DeliveryDetailsForm, UserEditForm, SearchForm)
 from .models import Cart, Product, Rating, DeliveryDetails, Discount, options
 from .tasks import send_order_email
-from .choices import s, get_field_choices, Status
+from .choices import Status, Choice, DISCOUNT_STATUS_CHOICES, CART_STATUS_CHOICES
 
 def home(request, page=1):
-    stat = Status()
     products = Product.objects.order_by('name').all()
     prod = Paginator(products, options.products_per_page)
     context = { "products" : prod.page(page), "type" : 2, "page_nr" : page}
@@ -88,7 +87,8 @@ def product_rating(request):
             rate = prod.product_rating()
             current_user = request.user
             try:
-                enable = (current_user.cart_set.filter(products__id=prod_id, status='1')
+                enable = (current_user.cart_set.filter(products__id=prod_id, 
+                                                       status=CART_STATUS_CHOICES.ORDERED)
                                               .exists())
             except AttributeError:
                 enable = False    
@@ -139,7 +139,7 @@ def delivery_details(request):
 @login_required
 def review_order(request):
     current_user = request.user
-    cart = current_user.cart_set.filter(status='0').first()
+    cart = current_user.cart_set.filter(status=CART_STATUS_CHOICES.ACTIVE).first()
     if cart:
         return render(request, "review_order.html", {'cart':cart})
     else:
@@ -148,7 +148,7 @@ def review_order(request):
 @login_required
 def checkout(request):
     current_user = request.user
-    cart = current_user.cart_set.filter(status='0').first()
+    cart = current_user.cart_set.filter(status=CART_STATUS_CHOICES.ACTIVE).first()
     if cart:
         cart.create_order()
         messages.add_message(request, messages.INFO, 'Your order was created')
@@ -161,7 +161,7 @@ def checkout(request):
 
 def delete_prod(request, prod_id):
     current_user = get_user(request)
-    cart =Cart.objects.filter(user=current_user, status='0').first()
+    cart =Cart.objects.filter(user=current_user, status=CART_STATUS_CHOICES.ACTIVE).first()
     if cart:
         prod = cart.cart_products_set.filter(product__id=prod_id).first()
         if prod:
@@ -174,14 +174,16 @@ def delete_prod(request, prod_id):
 @login_required
 def user_orders(request):
     current_user = request.user
-    cart =Cart.objects.filter(user=current_user, status='1').all()                         
+    cart =Cart.objects.filter(user=current_user, status=CART_STATUS_CHOICES.ACTIVE).all()                         
     return render(request, "user_orders.html", {'cart': cart})
 
 @login_required
 def order_details(request, cart_id):
     current_user = request.user
     try:
-        products = (Cart.objects.filter(id=cart_id, user=request.user, status='1')
+        products = (Cart.objects.filter(id=cart_id, 
+                                        user=request.user, 
+                                        status=CART_STATUS_CHOICES.ORDERED)
                               .first().cart_products_set.all())
     except AttributeError:
         messages.add_message(request, messages.INFO, 'We could not find the required order')
@@ -200,7 +202,7 @@ def edit_account(request):
     return render(request, 'edit_user.html',{'form':form})
 
 def offers(request):
-    offers =Discount.objects.filter(status='0')
+    offers =Discount.objects.filter(status=CART_STATUS_CHOICES.ACTIVE)
     return render(request, "offers.html", {'offers':offers})
 
 def offer_details(request, offer_id):
@@ -226,7 +228,7 @@ def load_sidebar_cart(request):
     context = {}      
     current_user = check_user(request)
     if hasattr(current_user, 'cart_set') and current_user.cart_set.count()>0:
-        if current_user.cart_set.last().status == '0':
+        if current_user.cart_set.last().status == CART_STATUS_CHOICES.ACTIVE:
             cart = current_user.cart_set.last()    
             context['price'] = cart.cart_amount() 
             context['prod'] = cart.cart_products_set.all()   

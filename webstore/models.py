@@ -9,7 +9,7 @@ from phonenumber_field.modelfields import PhoneNumberField
 from django.core.validators import MaxLengthValidator
 
 from store.site_settings import SiteSettings
-from .choices import s, get_field_choices
+from .choices import DISCOUNT_STATUS_CHOICES, CART_STATUS_CHOICES
 
 options = SiteSettings('Site Settings')
 STATUS_CHOICES = (
@@ -21,28 +21,29 @@ ACTIVE = 0
 PENDING = 1
 FINISHED = 2
 
-DISCOUNT_STATUS_CHOICES = (
-    ('0', 'Active'),
-    ('1', 'Pending'),
-    ('2', 'Finished'),
-)
+#DISCOUNT_STATUS_CHOICES = (
+#    ('0', 'Active'),
+#    ('1', 'Pending'),
+#    ('2', 'Finished'),
+#)
 
 
 class UserMethods(User):
     
     def orders(self):
-        orders = self.cart_set.filter(status='1').all()
+        orders = self.cart_set.filter(status=CART_STATUS_CHOICES.ORDERED).all()
         return orders
     
     def money_spent(self):
-        money_spent = self.cart_set.filter(status='1').aggregate(total=Sum('cart_products__price'))
+        money_spent = (self.cart_set.filter(status=CART_STATUS_CHOICES.ORDERED)
+                                    .aggregate(total=Sum('cart_products__price')))
         if money_spent['total']:
             return money_spent['total']
         else:
             return 0.0
     
     def products_ordered(self):
-        products_ordered = (self.cart_set.filter(status='1') 
+        products_ordered = (self.cart_set.filter(status=CART_STATUS_CHOICES.ORDERED) 
                                          .aggregate(total=Sum('cart_products__quantity')))
         if products_ordered['total']:
             return products_ordered['total']
@@ -50,7 +51,7 @@ class UserMethods(User):
             return 0
         
     def latest_order(self):
-        latest_order = (self.cart_set.filter(status='1') 
+        latest_order = (self.cart_set.filter(status=CART_STATUS_CHOICES.ORDERED) 
                                      .aggregate(latest=Max('cart_products__date_added')))
         if latest_order['latest']:
             return latest_order['latest']
@@ -58,7 +59,7 @@ class UserMethods(User):
             return "Not Ordered" 
         
     def first_order(self):
-        first_order = (self.cart_set.filter(status='1') 
+        first_order = (self.cart_set.filter(status=CART_STATUS_CHOICES.ORDERED) 
                                     .aggregate(latest=Min('cart_products__date_added')))
         if first_order['latest']:
             return first_order['latest']
@@ -66,8 +67,8 @@ class UserMethods(User):
             return "Not Ordered" 
         
     def offers_claimed(self):
-        offers = (self.cart_set.filter(status='1', 
-                                      discountedproducts__quantity__gt =0) 
+        offers = (self.cart_set.filter(status=CART_STATUS_CHOICES.ORDERED, 
+                                       discountedproducts__quantity__gt =0) 
                                .annotate(dcount=Count('discountedproducts__cart')))
         return offers        
             
@@ -117,7 +118,8 @@ class Product(models.Model):
             return 0.0
         
     def discount(self):
-        discount = self.discount_set.filter(status='0').aggregate(max_percent=Max('percent'))
+        discount = (self.discount_set.filter(status=DISCOUNT_STATUS_CHOICES.ACTIVE)
+                                     .aggregate(max_percent=Max('percent')))
         if discount:
             return discount['max_percent']
         else:
@@ -137,15 +139,15 @@ class Discount(models.Model):
     end_date = models.DateField(default=datetime.datetime.now(), null=True, blank=True)
     products = models.ManyToManyField(Product)
     status = models.CharField(max_length=1,
-                              choices=get_field_choices(s),
-                              default='1')
+                              choices=DISCOUNT_STATUS_CHOICES.choices,
+                              default=DISCOUNT_STATUS_CHOICES.PENDING)
     def __unicode__(self):
         return self.name 
     
     def offer_status(self):
-        if self.status == '0':
+        if self.status == DISCOUNT_STATUS_CHOICES.ACTIVE:
             return "Active"
-        elif self.status == '1':
+        elif self.status == DISCOUNT_STATUS_CHOICES.PENDING:
             return "Waiting to start"
         else:
             return "This offer expired"
@@ -179,17 +181,18 @@ class CartManager(models.Manager):
     
     @staticmethod
     def orders_total_price():
-        total_price = Cart.objects.filter(status='1').aggregate(total=Sum('cart_products__price'))
+        total_price = (Cart.objects.filter(status=CART_STATUS_CHOICES.ORDERED)
+                                   .aggregate(total=Sum('cart_products__price')))
         return total_price['total']
     
     @staticmethod
     def total_orders():
-        total_orders = Cart.objects.filter(status='1').count()
+        total_orders = Cart.objects.filter(status=CART_STATUS_CHOICES.ORDERED).count()
         return total_orders
     
     @staticmethod
     def total_products_ordered():
-        total_orders = (Cart.objects.filter(status='1')
+        total_orders = (Cart.objects.filter(status=CART_STATUS_CHOICES.ORDERED)
                            .aggregate(total=Sum('cart_products__quantity')))
         return total_orders['total']
       
@@ -198,8 +201,8 @@ class Cart(models.Model):
     products = models.ManyToManyField(Product, through='Cart_Products')
     user = models.ForeignKey(User)
     status = models.CharField(max_length=1,
-                              choices=STATUS_CHOICES,
-                              default='0')
+                              choices=CART_STATUS_CHOICES.choices,
+                              default=CART_STATUS_CHOICES.ACTIVE)
     objects = CartManager()
     
     def __unicode__(self): 
@@ -207,7 +210,7 @@ class Cart(models.Model):
      
     @staticmethod   
     def from_user(user):
-        cart = Cart.objects.filter(user=user, status='0').first()
+        cart = Cart.objects.filter(user=user, status=CART_STATUS_CHOICES.ACTIVE).first()
         if not cart:
             cart = Cart(user=user)
             cart.save()         
@@ -223,7 +226,7 @@ class Cart(models.Model):
         else:
               prod_cart = self.add_product_cart(prod, quantity)
               prod.modify_quantity(quantity)
-        discount = prod.discount_set.filter(status='0').last() 
+        discount = prod.discount_set.filter(status=DISCOUNT_STATUS_CHOICES.ACTIVE).last() 
         if discount:     
             DiscountedProducts.add_product(discount, prod, self, quantity)      
         return prod, prod_cart
@@ -257,7 +260,7 @@ class Cart(models.Model):
         return date_created['date_added__max'] 
     
     def create_order(self):
-        self.status = '1'
+        self.status = CART_STATUS_CHOICES.ORDERED
         self.save() 
                       
             
@@ -304,7 +307,7 @@ class DeliveryDetails(models.Model):
     
     @staticmethod
     def from_user(user):
-        cart = user.cart_set.filter(status='0').first()
+        cart = user.cart_set.filter(status=CART_STATUS_CHOICES.ACTIVE).first()
         instance = DeliveryDetails.objects.filter(user=user, cart=cart).first()
         if not instance:
             instance = DeliveryDetails(user=user, cart=cart)
