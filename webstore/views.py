@@ -174,7 +174,7 @@ def delete_prod(request, prod_id):
 @login_required
 def user_orders(request):
     current_user = request.user
-    cart =Cart.objects.filter(user=current_user, status=CART_STATUS_CHOICES.ACTIVE).all()                         
+    cart =Cart.objects.filter(user=current_user, status=CART_STATUS_CHOICES.ORDERED).all()                         
     return render(request, "user_orders.html", {'cart': cart})
 
 @login_required
