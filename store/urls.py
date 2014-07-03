@@ -13,8 +13,6 @@ urlpatterns = patterns('',
     url(r'^register', 'webstore.views.register', name='register'),
     url(r'^editaccount', 'webstore.views.edit_account', name='edit_account'),
 
-    url(r'^admin/users_stats/$', 'webstore.admin.users_stats', name='users_stats'),
-    url(r'^admin/user_data/(?P<user_id>\d+)/$', 'webstore.admin.user_data', name='user_data'),
     url(r'^admin/', include(admin.site.urls)),
     url(r'^settings/', include('dbsettings.urls')),
     url(r'^store/', include('webstore.urls', namespace='webstore', app_name='webstore')),

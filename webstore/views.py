@@ -13,11 +13,13 @@ from django.db.models import Count
 
 from .forms import (RegisterForm, CartForm, RatingForm, ProductRatingsForm , 
                    DeliveryDetailsForm, UserEditForm, SearchForm)
-from .models import Cart, Product, Rating, DeliveryDetails, Discount, options
+from .models import Cart, Product, Rating, DeliveryDetails, Discount, UserMethods, options
 from .tasks import send_order_email
-from .choices import Status, Choice, DISCOUNT_STATUS_CHOICES, CART_STATUS_CHOICES
+from .choices import DISCOUNT_STATUS_CHOICES, CART_STATUS_CHOICES
 
 def home(request, page=1):
+    user = UserMethods.objects.get(pk=1)
+    user.offers_claimed()
     products = Product.objects.order_by('name').all()
     prod = Paginator(products, options.products_per_page)
     context = { "products" : prod.page(page), "type" : 2, "page_nr" : page}

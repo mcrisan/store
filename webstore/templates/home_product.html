@@ -5,8 +5,8 @@
 			<b><a href="{% url 'webstore:product_details' prod_id=product.id %}">{{product.name}}</a> </b>
 		</div>
 		<div class="thumbnail">
-			{% if product.discount > 0 %}
-				<div class="discount_image">-{{product.discount}}%</div>
+			{% if product.discount %}
+				<div class="discount_image">-{{product.discount.percent}}%</div>
 			{% endif %}	
 			<a href=""><img src="{{product.image_url}}" class="product_image" ></a>
 		</div>

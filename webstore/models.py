@@ -12,20 +12,6 @@ from store.site_settings import SiteSettings
 from .choices import DISCOUNT_STATUS_CHOICES, CART_STATUS_CHOICES
 
 options = SiteSettings('Site Settings')
-STATUS_CHOICES = (
-    ('0', 'Active'),
-    ('1', 'Ordered'),
-)
-discount_status={"active" : 0, "pending" : 1, "finished" : 2}
-ACTIVE = 0
-PENDING = 1
-FINISHED = 2
-
-#DISCOUNT_STATUS_CHOICES = (
-#    ('0', 'Active'),
-#    ('1', 'Pending'),
-#    ('2', 'Finished'),
-#)
 
 
 class UserMethods(User):
@@ -41,6 +27,7 @@ class UserMethods(User):
             return money_spent['total']
         else:
             return 0.0
+    money_spent.admin_order_field = 'total_amount'
     
     def products_ordered(self):
         products_ordered = (self.cart_set.filter(status=CART_STATUS_CHOICES.ORDERED) 
@@ -49,6 +36,7 @@ class UserMethods(User):
             return products_ordered['total']
         else:
             return 0
+    products_ordered.admin_order_field = 'nr_prod'    
         
     def latest_order(self):
         latest_order = (self.cart_set.filter(status=CART_STATUS_CHOICES.ORDERED) 
@@ -57,29 +45,40 @@ class UserMethods(User):
             return latest_order['latest']
         else:
             return "Not Ordered" 
+    latest_order.admin_order_field = 'latest'     
         
     def first_order(self):
         first_order = (self.cart_set.filter(status=CART_STATUS_CHOICES.ORDERED) 
-                                    .aggregate(latest=Min('cart_products__date_added')))
-        if first_order['latest']:
-            return first_order['latest']
+                                    .aggregate(first=Min('cart_products__date_added')))
+        if first_order['first']:
+            return first_order['first']
         else:
             return "Not Ordered" 
+    first_order.admin_order_field = 'first' 
         
     def offers_claimed(self):
-        offers = (self.cart_set.filter(status=CART_STATUS_CHOICES.ORDERED, 
-                                       discountedproducts__quantity__gt =0) 
-                               .annotate(dcount=Count('discountedproducts__cart')))
-        return offers        
-            
+        offers = (Discount.objects.filter(cart_products__cart__user=self).annotate(Count('id'))).count()
+        return offers                   
 
     class Meta:
         proxy=True
-        #app_label = 'auth'
+        verbose_name = "User Statistics"
+        verbose_name_plural = "User Statistics"
 
 
 class Category(models.Model):
     name = models.CharField("Name", max_length=50)
+    
+    def products_category(self):
+        return self.products.count()
+    
+    def quantity_ordered(self):
+        quant = self.products.filter(cart_products__cart__status=1).aggregate(quant=Sum('cart_products__quantity'))['quant']
+        return quant
+    
+    def revenue(self):
+        revenue = self.products.filter(cart_products__cart__status=1).aggregate(revenue=Sum('cart_products__price'))['revenue']
+        return revenue
     
     def __unicode__(self):  
         return self.name
@@ -118,17 +117,30 @@ class Product(models.Model):
             return 0.0
         
     def discount(self):
-        discount = (self.discount_set.filter(status=DISCOUNT_STATUS_CHOICES.ACTIVE)
-                                     .aggregate(max_percent=Max('percent')))
-        if discount:
-            return discount['max_percent']
-        else:
-            return 0
+        discount =(self.discount_set.filter(status=DISCOUNT_STATUS_CHOICES.ACTIVE).
+                                order_by('-percent').
+                                first())
+        return discount       
+    
+    def revenue(self):
+        revenue =(self.cart_products_set.filter(cart__status=CART_STATUS_CHOICES.ORDERED).
+                                        aggregate(rev=Sum('price'))['rev']
+                                )
+        return revenue
     
     def discounted_price(self):
-        discount = self.discount()
+        if self.discount():
+            discount = self.discount().percent
+        else:
+            discount = 0    
         price = self.price - self.price*discount/100
         return price
+    
+    def has_discount(self):
+        if self.discount_set.filter(status=DISCOUNT_STATUS_CHOICES.ACTIVE).exists():
+            return True
+        else:
+            return False
 
 
 class Discount(models.Model):
@@ -151,6 +163,24 @@ class Discount(models.Model):
             return "Waiting to start"
         else:
             return "This offer expired"
+        
+    def quantity_ordered(self):
+        quant = self.cart_products_set.aggregate(quant=Sum('quantity'))
+        return quant['quant']
+    
+    def money_spent(self):
+        price = self.cart_products_set.aggregate(price=Sum('price'))
+        return price['price']
+    
+    def real_value(self):
+        #price = self.cart_products_set.aggregate(price=Sum('product__price')*)
+        price=self.money_spent()
+        price_list =self.cart_products_set.values('product__price').annotate(quant=Sum('quantity'))
+        price=0
+        for data in price_list:
+            price=price + data['product__price']*data['quant']
+        return price
+      
       
         
 class Rating(models.Model):
@@ -221,26 +251,25 @@ class Cart(models.Model):
         prod_cart = self.cart_products_set.filter(product = prod).first()
         if prod_cart:
                old_quant = prod_cart.quantity
-               self.update_from_product_cart(prod_cart, quantity, prod.discounted_price())
+               self.update_from_product_cart(prod_cart, quantity, prod.discounted_price(), prod.discount())
                prod.modify_quantity(quantity - old_quant)
         else:
-              prod_cart = self.add_product_cart(prod, quantity)
-              prod.modify_quantity(quantity)
-        discount = prod.discount_set.filter(status=DISCOUNT_STATUS_CHOICES.ACTIVE).last() 
-        if discount:     
-            DiscountedProducts.add_product(discount, prod, self, quantity)      
+              prod_cart = self.add_product_cart(prod, quantity, prod.discount())
+              prod.modify_quantity(quantity)   
         return prod, prod_cart
                                             
-    def add_product_cart(self, prod, quantity): 
+    def add_product_cart(self, prod, quantity, discount): 
         prod_cart = self.cart_products_set.create(product = prod, cart = self, quantity = quantity,
                                                   price = prod.discounted_price() * float(quantity),
-                                                  date_added = datetime.datetime.now() ) 
+                                                  date_added = datetime.datetime.now(),
+                                                  discount = discount ) 
         return prod_cart
         
     @staticmethod     
-    def update_from_product_cart(prod_cart, quantity, price): 
+    def update_from_product_cart(prod_cart, quantity, price, discount): 
         prod_cart.quantity = quantity
         prod_cart.price = price * float(quantity)
+        prod_cart.discount = discount
         prod_cart.save()
         
     def cart_amount(self):
@@ -270,9 +299,14 @@ class Cart_Products(models.Model):
     quantity = models.IntegerField()
     price = models.FloatField()
     date_added = models.DateField()
+    discount = models.ForeignKey(Discount, null=True, blank=True, default = None)
     
     class Meta:
         verbose_name = "product in cart"
+        
+    @property
+    def getuser(self):
+        return self.cart.user   
     
     
 class DiscountedProducts(models.Model):

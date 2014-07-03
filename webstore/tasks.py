@@ -55,7 +55,7 @@ def send_order_email(to_user):
 def start_promotions():
     print "start discounts"
     date=datetime.datetime.now().date()
-    discounts = (Discount.objects.filter(start_date__gte=date, end_date__gte=date)
+    discounts = (Discount.objects.filter(start_date__lte=date, end_date__gte=date)
                                 .exclude(status=DISCOUNT_STATUS_CHOICES.ACTIVE).all())
     for discount in discounts:
         discount.status=DISCOUNT_STATUS_CHOICES.ACTIVE 
