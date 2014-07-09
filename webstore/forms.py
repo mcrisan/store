@@ -1,12 +1,15 @@
+from django import forms
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
+from django.contrib.comments.forms import CommentForm
+from django.contrib.admin import widgets
 from django.forms import ModelForm, Textarea, CharField, ValidationError, IntegerField, Form
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Submit
 
 from webstore.models import Product
-from .models import Cart, Rating, DeliveryDetails
-
+from .models import Cart, Rating, DeliveryDetails, Coupon
+from .choices import DISCOUNT_STATUS_CHOICES
 
 class RegisterForm(UserCreationForm):
     first_name = CharField(max_length=30)
@@ -19,7 +22,7 @@ class RegisterForm(UserCreationForm):
     class Meta:
         model = User
         fields = ("first_name", "last_name", 'username', 'password1') 
-   
+ 
         
 class UserEditForm(ModelForm):
     class Meta:
@@ -28,8 +31,17 @@ class UserEditForm(ModelForm):
   
         
 class SearchForm(Form):
-    query = CharField(max_length=100)               
+    query = CharField(max_length=100)  
+    
+
+class DiscountCodeForm(Form):
+    code = CharField(max_length=20)                  
  
+    def clean_code(self):
+        code = self.cleaned_data['code']
+        if not Coupon.objects.filter(code__exact=code, status=DISCOUNT_STATUS_CHOICES.ACTIVE).exists():
+            raise ValidationError("Code is not valid")
+        return code 
         
 class DeliveryDetailsForm(ModelForm):    
     class Meta:

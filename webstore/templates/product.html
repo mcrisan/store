@@ -1,17 +1,30 @@
 {% extends "base.html" %}
 {% load staticfiles %}
+{% load comments %}
 {% block styling %}
 	{{ block.super }}
 	<link rel="stylesheet" href="{% static 'rating/jquery.raty.css' %}"> 
 {% endblock styling %}
 {% block content %}
+<div class="row">
 <div class="col-md-12 center"><h2>{{product.name}}</h2></div>
-<div class="col-md-6">
-<a href=""><img class="product_thumbnail" src="{{product.image_url}}" ></a>
-</div>
+
+<div class="thumbnail col-md-6">
+			{% if product.discount %}
+				<div class="discount_image">-{{product.discount.percent}}%</div>
+			{% endif %}	
+			<a href=""><img src="{{product.image_url}}" class="product_thumbnail" ></a>
+		</div>
 <div class="col-md-6">
 		<div class="product_details">
-			<span>Price: {{product.price}} </span><br/>
+			{% if product.discount > 0 %}
+				<span>Price: 
+					<span class="list-price">{{product.price}}</span> 
+					<span class="discount_price">{{product.discounted_price}}</span>
+				</span>
+			{% else %}
+				<span>Price: {{product.price}} </span>
+			{% endif %} <br/>
 			<span>Qty: <input class="quant" type="text" required> </span> </br>
 			<span>Stock: <span id="stock{{product.id}}">{{product.quantity}}</span> </span><br/>
 			<span>Total orders: {{product.total_orders}}</span><br/>
@@ -21,7 +34,17 @@
 			<span class="error"></span>
 		</div>
 </div>
-
+</div><br/><br/>
+<div class="row">
+{% if user.is_authenticated %}
+      {% include "partial/_comment_form.html" with product=product %}
+{% else %}
+    <p>Please <a href="{% url 'auth_login' %}">log in</a> to leave a comment.</p>
+{% endif %}
+</div>
+<div class="row">
+{% include "partial/_comments.html" with object=product %}
+</div>
 {% endblock content %}
 
 {% block myscript %}

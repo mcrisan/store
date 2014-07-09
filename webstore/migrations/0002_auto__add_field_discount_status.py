@@ -8,15 +8,15 @@ from django.db import models
 class Migration(SchemaMigration):
 
     def forwards(self, orm):
-        # Deleting field 'Cart_Products.user'
-        db.delete_column(u'webstore_cart_products', 'user_id')
+        # Adding field 'Discount.status'
+        db.add_column(u'webstore_discount', 'status',
+                      self.gf('django.db.models.fields.CharField')(default='1', max_length=1),
+                      keep_default=False)
 
 
     def backwards(self, orm):
-        # Adding field 'Cart_Products.user'
-        db.add_column(u'webstore_cart_products', 'user',
-                      self.gf('django.db.models.fields.related.ForeignKey')(default=1, to=orm['auth.User']),
-                      keep_default=False)
+        # Deleting field 'Discount.status'
+        db.delete_column(u'webstore_discount', 'status')
 
 
     models = {
@@ -67,6 +67,7 @@ class Migration(SchemaMigration):
             'Meta': {'object_name': 'Cart_Products'},
             'cart': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['webstore.Cart']"}),
             'date_added': ('django.db.models.fields.DateField', [], {}),
+            'discount': ('django.db.models.fields.related.ForeignKey', [], {'default': 'None', 'to': u"orm['webstore.Promotion']", 'null': 'True', 'blank': 'True'}),
             u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'price': ('django.db.models.fields.FloatField', [], {}),
             'product': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['webstore.Product']"}),
@@ -77,6 +78,13 @@ class Migration(SchemaMigration):
             u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'name': ('django.db.models.fields.CharField', [], {'max_length': '50'})
         },
+        u'webstore.coupon': {
+            'Meta': {'object_name': 'Coupon', '_ormbases': [u'webstore.Promotion']},
+            'code': ('django.db.models.fields.CharField', [], {'max_length': '20'}),
+            u'promotion_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': u"orm['webstore.Promotion']", 'unique': 'True', 'primary_key': 'True'}),
+            'status': ('django.db.models.fields.CharField', [], {'default': "'1'", 'max_length': '1'}),
+            'volume': ('django.db.models.fields.PositiveIntegerField', [], {})
+        },
         u'webstore.deliverydetails': {
             'Meta': {'object_name': 'DeliveryDetails'},
             'address': ('django.db.models.fields.CharField', [], {'max_length': '100'}),
@@ -86,23 +94,10 @@ class Migration(SchemaMigration):
             'user': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['auth.User']"})
         },
         u'webstore.discount': {
-            'Meta': {'object_name': 'Discount'},
-            'description': ('django.db.models.fields.TextField', [], {}),
-            'end_date': ('django.db.models.fields.DateField', [], {'default': 'datetime.datetime(2014, 7, 1, 0, 0)', 'null': 'True', 'blank': 'True'}),
-            u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'name': ('django.db.models.fields.CharField', [], {'max_length': '100'}),
-            'percent': ('django.db.models.fields.FloatField', [], {}),
-            'products': ('django.db.models.fields.related.ManyToManyField', [], {'to': u"orm['webstore.Product']", 'symmetrical': 'False'}),
-            'start_date': ('django.db.models.fields.DateField', [], {'default': 'datetime.datetime(2014, 7, 1, 0, 0)'}),
+            'Meta': {'object_name': 'Discount', '_ormbases': [u'webstore.Promotion']},
+            'end_date': ('django.db.models.fields.DateField', [], {'default': 'datetime.datetime(2014, 7, 8, 0, 0)', 'null': 'True', 'blank': 'True'}),
+            u'promotion_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': u"orm['webstore.Promotion']", 'unique': 'True', 'primary_key': 'True'}),
             'status': ('django.db.models.fields.CharField', [], {'default': "'1'", 'max_length': '1'})
-        },
-        u'webstore.discountedproducts': {
-            'Meta': {'object_name': 'DiscountedProducts'},
-            'cart': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['webstore.Cart']"}),
-            'discount': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['webstore.Discount']"}),
-            u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'product': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['webstore.Product']"}),
-            'quantity': ('django.db.models.fields.IntegerField', [], {})
         },
         u'webstore.product': {
             'Meta': {'object_name': 'Product'},
@@ -112,6 +107,15 @@ class Migration(SchemaMigration):
             'name': ('django.db.models.fields.CharField', [], {'max_length': '100'}),
             'price': ('django.db.models.fields.FloatField', [], {}),
             'quantity': ('django.db.models.fields.IntegerField', [], {})
+        },
+        u'webstore.promotion': {
+            'Meta': {'object_name': 'Promotion'},
+            'description': ('django.db.models.fields.TextField', [], {}),
+            u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'name': ('django.db.models.fields.CharField', [], {'max_length': '100'}),
+            'percent': ('django.db.models.fields.FloatField', [], {}),
+            'products': ('django.db.models.fields.related.ManyToManyField', [], {'to': u"orm['webstore.Product']", 'symmetrical': 'False'}),
+            'start_date': ('django.db.models.fields.DateField', [], {'default': 'datetime.datetime(2014, 7, 8, 0, 0)'})
         },
         u'webstore.rating': {
             'Meta': {'object_name': 'Rating'},

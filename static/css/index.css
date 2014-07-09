@@ -39,6 +39,25 @@ body {
 	text-align:center
 }
 
+.left {
+	text-align:left
+}
+
+.right {
+	text-align:right
+}
+
+.red {
+	color:red;
+}
+
+.odd{
+    background-color:#F7F7F7;	
+}
+
+.even{
+	background-color:#FFFFFF;	
+}
 .row {
   margin-left: 0px;
   margin-right: 0px;
@@ -46,6 +65,10 @@ body {
 
 .qty {
 	float:right
+}
+
+.comm_body{
+	font-size: 0.9em;
 }
 
 .search_form{

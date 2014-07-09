@@ -3,23 +3,24 @@ import json
 import ipdb
 
 from django.shortcuts import render, redirect
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpResponseRedirect
 from django.contrib.auth.models import User
 from django.contrib import messages
 from django.contrib.auth.signals import user_logged_in
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.db.models import Count
+from django.contrib.comments.forms import CommentForm
+from django.contrib.comments import get_form
 
 from .forms import (RegisterForm, CartForm, RatingForm, ProductRatingsForm , 
-                   DeliveryDetailsForm, UserEditForm, SearchForm)
+                   DeliveryDetailsForm, UserEditForm, SearchForm, DiscountCodeForm)
 from .models import Cart, Product, Rating, DeliveryDetails, Discount, UserMethods, options
 from .tasks import send_order_email
 from .choices import DISCOUNT_STATUS_CHOICES, CART_STATUS_CHOICES
-
+ 
+   
 def home(request, page=1):
-    user = UserMethods.objects.get(pk=1)
-    user.offers_claimed()
     products = Product.objects.order_by('name').all()
     prod = Paginator(products, options.products_per_page)
     context = { "products" : prod.page(page), "type" : 2, "page_nr" : page}
@@ -54,6 +55,40 @@ def sort_by_popularity(request, type, page=1):
                 'old_type' : type, 
                 'page_nr' : page}
     return render(request, "home_sort_by_popularity.html", context)
+
+def comment_form(request):
+    error = request.GET.get('error', None)
+    requestDict = {'error': error}
+    return render_to_response('comments.html', requestDict, context_instance=RequestContext(request))
+
+def post_comment(request):
+    if request.method == 'POST':
+        prod_id = request.POST['object_pk']
+        print prod_id
+        prod = Product.objects.get(pk=prod_id)
+        form = CommentForm(target_object=prod, data=request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect('store_home')
+    else:
+        form = CommentForm() 
+    return render(request, "register.html", {'form': form})
+
+def comment(request) :
+    if request.method == 'POST' :
+        prod_id = request.POST['object_pk']
+        print prod_id
+        prod = Product.objects.get(pk=prod_id)
+        post_values = request.POST.copy()
+        post_values['name']= request.user.first_name + request.user.last_name
+        post_values['email']= request.user.email
+        comm_form = get_form()
+        form = comm_form(target_object=prod, data=post_values)
+        if (form.is_valid()) :
+            form.save()
+        ipdb.set_trace()   
+        return HttpResponseRedirect(request.POST['next'])
+    return HttpResponseRedirect('/')
 
 def product_details(request, prod_id):
     try:
@@ -140,12 +175,17 @@ def delivery_details(request):
 
 @login_required
 def review_order(request):
+    form = DiscountCodeForm() 
     current_user = request.user
     cart = current_user.cart_set.filter(status=CART_STATUS_CHOICES.ACTIVE).first()
-    if cart:
-        return render(request, "review_order.html", {'cart':cart})
-    else:
+    if not cart:
         return redirect('store_home')
+    if request.method == 'POST':      
+        form = DiscountCodeForm(data=request.POST)
+        if form.is_valid():
+            cart.apply_discount(form.data['code'])  
+            messages.add_message(request, messages.INFO, 'Your coupon has been applied')           
+    return render(request, "review_order.html", {'cart':cart, 'form':form})     
 
 @login_required
 def checkout(request):
@@ -169,6 +209,7 @@ def delete_prod(request, prod_id):
         if prod:
             product = Product.objects.get(pk = prod_id)
             product.modify_quantity(0 - prod.quantity)
+            prod.remove_dicount()
             prod.delete()
             messages.add_message(request, messages.INFO, 'Product was deleted')                            
     return redirect('store_home')
@@ -189,7 +230,7 @@ def order_details(request, cart_id):
                               .first().cart_products_set.all())
     except AttributeError:
         messages.add_message(request, messages.INFO, 'We could not find the required order')
-        return redirect('store_home')                                 
+        return redirect('store_home')                               
     return render(request, "order_details.html", {'products': products})
 
 def edit_account(request):
@@ -215,7 +256,6 @@ def offer_details(request, offer_id):
         return redirect('webstore:offers')    
     return render(request, "offer_details.html", {'offer':offer})
 
-
 def search(request):
     if request.method == 'POST':       
         form = SearchForm(data=request.POST)
@@ -238,6 +278,7 @@ def load_sidebar_cart(request):
 
 def load_sidebar_search(request):     
     form = SearchForm() 
+    promoform = DiscountCodeForm()
     context = {'form' : form} 
     return context
 

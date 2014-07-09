@@ -43,6 +43,7 @@ INSTALLED_APPS = (
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.contrib.comments',
     'south',
     'dbsettings',
     'djcelery',
@@ -131,3 +132,4 @@ EMAIL_HOST_PASSWORD = 'password'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 
+COMMENTS_APP = 'webstore'

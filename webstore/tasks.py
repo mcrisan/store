@@ -11,7 +11,7 @@ from django.template.loader import get_template
 from django.template import Context
 
 from store.settings import EMAIL_HOST_USER
-from .models import Cart, Product, User, Discount, options as opt
+from .models import Cart, Product, User, Discount, Promotion, options as opt
 from .choices import DISCOUNT_STATUS_CHOICES, CART_STATUS_CHOICES
 
 
@@ -52,7 +52,7 @@ def send_order_email(to_user):
     msg.send()
     
 @shared_task
-def start_promotions():
+def start_promotions1():
     print "start discounts"
     date=datetime.datetime.now().date()
     discounts = (Discount.objects.filter(start_date__lte=date, end_date__gte=date)
@@ -62,7 +62,23 @@ def start_promotions():
         discount.save()  
         
 @shared_task
-def stop_promotions():
+def start_promotions():
+    print "start discounts"
+    date=datetime.datetime.now().date()
+    promotions = (Promotion.objects.filter(start_date__lte=date)
+                                .exclude(status=DISCOUNT_STATUS_CHOICES.ACTIVE).all())
+    for promotion in promotions:
+        try:
+            if promotion.discount.end_date >= date:
+                promotion.status=DISCOUNT_STATUS_CHOICES.ACTIVE 
+                promotion.save()  
+        except Discount.DoesNotExist: 
+            if promotion.coupon.volume > 0:
+                promotion.status=DISCOUNT_STATUS_CHOICES.ACTIVE 
+                promotion.save()        
+        
+@shared_task
+def stop_promotions1():
     print "stop discounts"
     date=datetime.datetime.now().date()
     discounts = Discount.objects.filter(end_date__lt=date, 
@@ -70,5 +86,20 @@ def stop_promotions():
     for discount in discounts:
         if discount.end_date is not None:
             discount.status=DISCOUNT_STATUS_CHOICES.FINISHED 
-            discount.save()         
+            discount.save()    
+            
+@shared_task
+def stop_promotions():
+    print "stop discounts"
+    date=datetime.datetime.now().date()
+    promotions = Discount.objects.filter(status=DISCOUNT_STATUS_CHOICES.ACTIVE).all()
+    for promotion in promotions:
+        try:
+            if promotion.discount.end_date <= date:
+                promotion.status=DISCOUNT_STATUS_CHOICES.FINISHED 
+                promotion.discount.save()  
+        except Discount.DoesNotExist: 
+            if promotion.coupon.volume == 0:
+                promotion.coupon.status=DISCOUNT_STATUS_CHOICES.FINISHED 
+                promotion.coupon.save()                    
         

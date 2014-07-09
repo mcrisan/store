@@ -2,11 +2,15 @@ import datetime
 import ipdb
 
 from django.db import models
+from django.db.models import Q
 from django.db.models import Sum, Max, Avg, Min, Count
 from django.contrib.auth.models import User
 from django.contrib.sites.models import Site
+from django.contrib.comments.models import Comment
 from phonenumber_field.modelfields import PhoneNumberField
 from django.core.validators import MaxLengthValidator
+from mptt.models import MPTTModel, TreeForeignKey
+from django.contrib.comments.moderation import CommentModerator, moderator
 
 from store.site_settings import SiteSettings
 from .choices import DISCOUNT_STATUS_CHOICES, CART_STATUS_CHOICES
@@ -57,7 +61,8 @@ class UserMethods(User):
     first_order.admin_order_field = 'first' 
         
     def offers_claimed(self):
-        offers = (Discount.objects.filter(cart_products__cart__user=self).annotate(Count('id'))).count()
+        offers = (Promotion.objects.filter(cart_products__cart__user=self).
+                                   annotate(Count('id'))).count()
         return offers                   
 
     class Meta:
@@ -73,11 +78,13 @@ class Category(models.Model):
         return self.products.count()
     
     def quantity_ordered(self):
-        quant = self.products.filter(cart_products__cart__status=1).aggregate(quant=Sum('cart_products__quantity'))['quant']
+        quant = (self.products.filter(cart_products__cart__status=1).
+                               aggregate(quant=Sum('cart_products__quantity'))['quant'])
         return quant
     
     def revenue(self):
-        revenue = self.products.filter(cart_products__cart__status=1).aggregate(revenue=Sum('cart_products__price'))['revenue']
+        revenue = (self.products.filter(cart_products__cart__status=1).
+                                 aggregate(revenue=Sum('cart_products__price'))['revenue'])
         return revenue
     
     def __unicode__(self):  
@@ -117,15 +124,21 @@ class Product(models.Model):
             return 0.0
         
     def discount(self):
-        discount =(self.discount_set.filter(status=DISCOUNT_STATUS_CHOICES.ACTIVE).
+        discount =(self.promotion_set.filter(discount__isnull=False, status=DISCOUNT_STATUS_CHOICES.ACTIVE).
                                 order_by('-percent').
                                 first())
-        return discount       
+        if discount:
+            return discount.discount   
+        
+    def promotion(self):
+        prom =(self.promotion_set.filter(status=DISCOUNT_STATUS_CHOICES.ACTIVE).
+                                order_by('-percent').
+                                first())
+        return prom       
     
     def revenue(self):
         revenue =(self.cart_products_set.filter(cart__status=CART_STATUS_CHOICES.ORDERED).
-                                        aggregate(rev=Sum('price'))['rev']
-                                )
+                                        aggregate(rev=Sum('price'))['rev'])
         return revenue
     
     def discounted_price(self):
@@ -135,24 +148,35 @@ class Product(models.Model):
             discount = 0    
         price = self.price - self.price*discount/100
         return price
-    
-    def has_discount(self):
-        if self.discount_set.filter(status=DISCOUNT_STATUS_CHOICES.ACTIVE).exists():
+        
+    def has_coupon(self,code):
+        promotion = self.promotion_set.filter(coupon__isnull=False, coupon__code=code, status=DISCOUNT_STATUS_CHOICES.ACTIVE).first()
+        if promotion:
+            return promotion.coupon
+        
+
+class ProductModerator(CommentModerator):
+    moderate_after = 30
+
+    def moderate(self, comment, content_object, request):
+        already_moderated = super(ProductModerator,self).moderate(comment, content_object, request)
+        if already_moderated:
             return True
-        else:
-            return False
+        return True
+
+moderator.register(Product, ProductModerator)
 
 
-class Discount(models.Model):
+class Promotion(models.Model):
     name = models.CharField("Name", max_length=100)
     description = models.TextField(validators=[MaxLengthValidator(500)])
+    products = models.ManyToManyField(Product)
     percent = models.FloatField("Percent",)
     start_date = models.DateField(default=datetime.datetime.now())
-    end_date = models.DateField(default=datetime.datetime.now(), null=True, blank=True)
-    products = models.ManyToManyField(Product)
     status = models.CharField(max_length=1,
                               choices=DISCOUNT_STATUS_CHOICES.choices,
                               default=DISCOUNT_STATUS_CHOICES.PENDING)
+    
     def __unicode__(self):
         return self.name 
     
@@ -173,14 +197,27 @@ class Discount(models.Model):
         return price['price']
     
     def real_value(self):
-        #price = self.cart_products_set.aggregate(price=Sum('product__price')*)
-        price=self.money_spent()
-        price_list =self.cart_products_set.values('product__price').annotate(quant=Sum('quantity'))
-        price=0
-        for data in price_list:
-            price=price + data['product__price']*data['quant']
+        price =(self.cart_products_set.
+                filter(cart__status=CART_STATUS_CHOICES.ORDERED).
+                aggregate(quant=Sum('product__price', 
+                                    field='webstore_cart_products.quantity*webstore_product.price'))
+                ['quant'])
+
         return price
-      
+
+
+class Discount(Promotion):
+    end_date = models.DateField(default=datetime.datetime.now(), null=True, blank=True) 
+
+ 
+class Coupon(Promotion):
+    code = models.CharField(max_length=20)
+    volume = models.PositiveIntegerField() 
+    
+    def modify_quantity(self, quantity):
+        self.volume -= quantity
+        self.save()
+   
       
         
 class Rating(models.Model):
@@ -251,7 +288,10 @@ class Cart(models.Model):
         prod_cart = self.cart_products_set.filter(product = prod).first()
         if prod_cart:
                old_quant = prod_cart.quantity
-               self.update_from_product_cart(prod_cart, quantity, prod.discounted_price(), prod.discount())
+               self.update_from_product_cart(prod_cart, 
+                                             quantity, 
+                                             prod.discounted_price(), 
+                                             prod.discount())
                prod.modify_quantity(quantity - old_quant)
         else:
               prod_cart = self.add_product_cart(prod, quantity, prod.discount())
@@ -259,10 +299,11 @@ class Cart(models.Model):
         return prod, prod_cart
                                             
     def add_product_cart(self, prod, quantity, discount): 
-        prod_cart = self.cart_products_set.create(product = prod, cart = self, quantity = quantity,
-                                                  price = prod.discounted_price() * float(quantity),
-                                                  date_added = datetime.datetime.now(),
-                                                  discount = discount ) 
+        prod_cart = (self.cart_products_set.
+                          create(product = prod, cart = self, quantity = quantity,
+                                 price = prod.discounted_price() * float(quantity),
+                                 date_added = datetime.datetime.now(),
+                                 discount = discount )) 
         return prod_cart
         
     @staticmethod     
@@ -291,7 +332,29 @@ class Cart(models.Model):
     def create_order(self):
         self.status = CART_STATUS_CHOICES.ORDERED
         self.save() 
-                      
+        
+    def apply_discount(self, code):
+        coupon = (Coupon.objects.filter(code__exact=code, 
+                                        status=DISCOUNT_STATUS_CHOICES.ACTIVE).
+                                 first())
+        for prod in self.cart_products_set.exclude(discount = coupon):
+            prod.save_discount(code)
+                
+    def real_value(self): 
+        price =(self.cart_products_set.
+                aggregate(quant=Sum('product__price', 
+                                    field='webstore_cart_products.quantity*webstore_product.price'))
+                ['quant'])
+
+        return price   
+    
+    def money_saved(self): 
+        price =self.real_value() - self.cart_amount()
+        return price 
+    
+    def total_discount(self):
+        discount = self.money_saved()/self.real_value()*100
+        return discount    
             
 class Cart_Products(models.Model):
     product = models.ForeignKey(Product)
@@ -299,36 +362,28 @@ class Cart_Products(models.Model):
     quantity = models.IntegerField()
     price = models.FloatField()
     date_added = models.DateField()
-    discount = models.ForeignKey(Discount, null=True, blank=True, default = None)
+    discount = models.ForeignKey(Promotion, null=True, blank=True, default = None)
     
     class Meta:
         verbose_name = "product in cart"
         
-    @property
-    def getuser(self):
-        return self.cart.user   
-    
-    
-class DiscountedProducts(models.Model):
-     discount = models.ForeignKey(Discount)
-     product = models.ForeignKey(Product)
-     cart = models.ForeignKey(Cart) 
-     quantity = models.IntegerField("Quantity")
-     
-     @staticmethod
-     def add_product(discount, product, cart, quantity):
-        disc_prod = DiscountedProducts.objects.filter(discount=discount, 
-                                                      product=product, 
-                                                      cart=cart).first()
-        if not disc_prod:
-            disc_prod = DiscountedProducts(discount=discount, 
-                                           product=product, 
-                                           cart=cart, 
-                                           quantity=quantity)
-            disc_prod.save()
-        else:
-            disc_prod.quantity = quantity 
-            disc_prod.save()   
+    def remove_dicount(self):
+        if self.discount and hasattr(self.discount, 'coupon'):
+            coupon = self.discount.coupon
+            coupon.volume += self.quantity
+            coupon.save()
+            
+    def save_discount(self, code):
+        coup = self.product.has_coupon(code)
+        if coup and self.quantity <= coup.volume:
+            self.price = (self.product.price - self.product.price * coup.percent/100) * self.quantity
+            if hasattr(self.discount, 'coupon'):
+                self.discount.coupon.volume +=self.quantity
+                self.discount.coupon.save()
+            self.discount = coup
+            self.save()  
+            coup.modify_quantity(self.quantity)                     
+                
 
 class DeliveryDetails(models.Model):
     address = models.CharField("Name", max_length=100)

@@ -6,14 +6,14 @@
 			 	<div class="col-md-1">{{forloop.counter}}</div>
 			 	<div class="col-md-3">{{product.product.name}}</div>
 			 	<div class="col-md-1 quant"><span class="quantity">{{product.quantity}}</span> <span class="edit" data-prod="{{product.product.id}}" data-qty="{{product.product.quantity}}" >E</span><span class="input_qty"></span></div>
-			 	<div class="col-md-2 price">{{product.price}}</div>
+			 	<div class="col-md-2 price">{{product.price|floatformat:-2}}</div>
 			 	<div class="col-md-1"><a href="{% url 'webstore:delete_prod'  prod_id=product.product.id %}">X</a></div>
 		 	</div>
 	 {% empty %}
 	 	<div class="row">Your cart is empty</div>
 	 {% endfor %}
 	 {% if prod %}
-		 <div class="total col-md-offset-6">Total: {{price}}</div>
+		 <div class="total col-md-offset-6">Total: {{price|floatformat:-2}}</div>
 		 <br/>
 		 <div>
 		 	<a class="col-md-12 btn-info" href="{% url 'webstore:delivery_details' %}">Checkout</a>

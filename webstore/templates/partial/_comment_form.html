@@ -1,0 +1,20 @@
+{% load comments %}
+
+{% get_comment_form for product as form %}
+    <form role="form" class="form-horizontal" action="{% comment_form_target %}" method="POST">
+    {% csrf_token %}
+    <!-- Text input-->
+		<div class="form-group">
+		  <label class="control-label col-md-3 left" for="id_comment">Leave Comment:</label>
+		  <div class="col-md-12">
+		    <textarea id="id_comment" name="comment" class="form-control" rows="4" cols="50" required></textarea>
+		  </div>
+		</div>
+    {{ form.content_type }}
+    {{ form.object_pk }}
+    {{ form.timestamp }}
+    {{ form.security_hash }}
+    <input type="hidden" name="next" value="{% url 'webstore:product_details' prod_id=product.id %}" />
+    <input class=" col-md-offset-10 btn btn-primary" type="submit" value="Add comment" />
+    
+    </form>

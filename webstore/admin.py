@@ -13,8 +13,9 @@ from django.contrib.contenttypes.models import ContentType
 from django.db.models import Count, Sum, Max, Min
 from django.contrib.admin import SimpleListFilter
 
-from .models import Category, Product, Cart, Cart_Products, Rating, Discount, UserMethods
+from .models import Category, Product, Cart, Cart_Products, Rating, Discount, UserMethods, Coupon
 from .choices import CART_STATUS_CHOICES
+
 
 class DiscountForm(forms.ModelForm):
     class Meta:
@@ -48,6 +49,7 @@ class ProductForm(forms.ModelForm):
         if self.cleaned_data['price'] <= 0:
             raise forms.ValidationError("Price should be over 0")
         return self.cleaned_data['price'] 
+ 
     
 class RatingForm(forms.ModelForm):
     class Meta:
@@ -90,6 +92,7 @@ class UserFilter(SimpleListFilter):
             return queryset.filter(user__id__exact=self.value())
         else:
             return queryset    
+ 
     
 class Cart_ProductsAdmin(admin.ModelAdmin):
     def discount_value(self,obj):
@@ -103,6 +106,7 @@ class Cart_ProductsAdmin(admin.ModelAdmin):
                     'date_added', 'discount_value')
     search_fields = ['name']     
     list_filter = ('discount__percent', 'cart__user', 'product__category')
+
 
 class CategoryAdmin(admin.ModelAdmin):
     def products_category(self, obj):
@@ -134,12 +138,15 @@ class CategoryAdmin(admin.ModelAdmin):
 
 class ProductAdmin(admin.ModelAdmin): 
     def product_discount(self, obj):
-        if obj.discount():
-            discount = obj.discount().name
-            url =reverse("admin:webstore_discount_changelist")
+        if obj.promotion():
+            discount = obj.promotion().name
+            if(hasattr(obj.promotion(), 'discount')):
+                url =reverse("admin:webstore_discount_changelist")
+            else:
+                url =reverse("admin:webstore_coupon_changelist")    
             lookup = u"name"
             text = discount
-            return u"<a href='%s?%s=%s'>%s</a>" % (url, lookup, obj.discount().name, text) 
+            return u"<a href='%s?%s=%s'>%s</a>" % (url, lookup, obj.promotion().name, text) 
         else:   
             return None
     product_discount.allow_tags = True
@@ -147,7 +154,7 @@ class ProductAdmin(admin.ModelAdmin):
     
     def product_orders(self, obj):
         if obj.total_orders():
-            discount = obj.discount().name
+            discount = obj.promotion().name
             url =reverse("admin:webstore_cart_changelist")
             lookup = u"cart_products__product"
             text = obj.total_orders()
@@ -157,18 +164,18 @@ class ProductAdmin(admin.ModelAdmin):
     product_orders.allow_tags = True
     product_orders.short_description = 'Product orders'
         
-    list_display = ('name', 'quantity', 'price', 
-                    'quantity_ordered', 'revenue', 'product_orders', 'product_rating', 'product_discount')
+    list_display = ('name', 'quantity', 'price', 'quantity_ordered', 
+                    'revenue', 'product_orders', 'product_rating', 'product_discount')
     search_fields = ['name']
     inlines = [RatingInline]
     form = ProductForm
-    list_filter = ('discount', 'category') 
+    #list_filter = ('discount', 'category')
+    list_filter = ( 'promotion', 'category')  
 
-
-class DiscountAdmin(admin.ModelAdmin):
+class PromotionAdmin(admin.ModelAdmin):
     def products_offer(self, obj):
         url =reverse("admin:webstore_product_changelist")
-        lookup = u"discount__id__exact"
+        lookup = u"promotion__id__exact"
         text = u"View Products"
         return u"<a href='%s?%s=%d'>%s</a>" % (url, lookup, obj.pk, text)
     products_offer.allow_tags = True
@@ -181,8 +188,12 @@ class DiscountAdmin(admin.ModelAdmin):
         return u"<a href='%s?%s=%d'>%s</a>" % (url, lookup, obj.pk, text)
     products_ordered.allow_tags = True
     products_ordered.short_description = 'Products Ordered'
-        
-    list_display = ('name', 'percent', 'start_date', 'end_date', 'status', 'products_offer', 'quantity_ordered', 'money_spent', 'real_value', 'products_ordered')
+
+
+class DiscountAdmin(PromotionAdmin):       
+    list_display = ('name', 'percent', 'start_date', 'end_date', 'status', 
+                    'products_offer', 'quantity_ordered', 'money_spent', 
+                    'real_value', 'products_ordered')
     search_fields = ['name']
     filter_horizontal = ('products',)
     form = DiscountForm
@@ -206,7 +217,12 @@ class CartAdmin(admin.ModelAdmin):
         discount_lookup = u"discount__isnull"
         cart_lookup = u"cart__id__exact"
         text = u"View Products"
-        return u"<a href='%s?%s=%d&%s=%d'>%s</a>" % (url, discount_lookup, False, cart_lookup, obj.id, text)
+        return u"<a href='%s?%s=%d&%s=%d'>%s</a>" % (url, 
+                                                     discount_lookup, 
+                                                     False, 
+                                                     cart_lookup, 
+                                                     obj.id, 
+                                                     text)
     discounted_products.allow_tags = True
     discounted_products.short_description = 'Discounted Products'
     
@@ -214,6 +230,7 @@ class CartAdmin(admin.ModelAdmin):
                     'cart_latest_update', 'status', 'cart_products', 'discounted_products')
     inlines = [Cart_ProductsInline]   
     list_filter = ('status', UserFilter, 'cart_products__product' )
+ 
     
 class UserMethodsAdmin(admin.ModelAdmin):
     model = UserMethods
@@ -255,7 +272,9 @@ class UserMethodsAdmin(admin.ModelAdmin):
         return u"<a href='%s?%s=%d'>%s</a>" % (url, lookup, obj.pk, text)
     offers_used.allow_tags = True
         
-    list_display = ('username', 'money_spent', 'products_ordered', 'latest_order', 'first_order', 'offers_claimed', 'number_of_orders', 'average_prod_order', 'average_money_order', 'offers_used')  
+    list_display = ('username', 'money_spent', 'products_ordered', 'latest_order', 
+                    'first_order', 'offers_claimed', 'number_of_orders', 
+                    'average_prod_order', 'average_money_order', 'offers_used')  
      
     
     def has_add_permission(self, request):
@@ -275,6 +294,7 @@ class UserMethodsAdmin(admin.ModelAdmin):
     
 #    def has_change_permission(self, request, obj=None):
 #        return False
+  
     
 class CustomUserAdmin(UserAdmin):
     model = UserMethods
@@ -303,13 +323,30 @@ class CustomUserAdmin(UserAdmin):
         lookup = u"user"
         status = u"status__exact"
         text = u"View Orders"
-        return u"<a href='%s?%s=%d&%s=%s'>%s</a>" % (url, lookup, obj.pk, status, CART_STATUS_CHOICES.ORDERED, text)
+        return u"<a href='%s?%s=%d&%s=%s'>%s</a>" % (url, 
+                                                     lookup, 
+                                                     obj.pk, 
+                                                     status, 
+                                                     CART_STATUS_CHOICES.ORDERED, 
+                                                     text)
     orders.allow_tags = True
     
     def queryset(self, request):
         return self.model.objects.all().exclude(first_name='Anonymous')
     
-    list_display = ('username', 'email', 'first_name', 'last_name', 'is_active', 'date_joined', 'is_staff', 'get_admin_url', 'orders', 'products_bought')
+    list_display = ('username', 'email', 'first_name', 'last_name', 'is_active', 
+                    'date_joined', 'is_staff', 'get_admin_url', 'orders', 
+                    'products_bought')
+    
+class CouponAdmin(PromotionAdmin):
+       
+    list_display = ('name', 'percent', 'start_date', 'status', 
+                    'products_offer', 'quantity_ordered', 'money_spent', 
+                    'real_value', 'products_ordered','volume','code')
+    search_fields = ['name']
+    filter_horizontal = ('products',)
+    form = DiscountForm
+    list_filter = ('status', 'cart_products__cart__user', 'name')    
    
 
 admin.site.unregister(User)
@@ -320,3 +357,4 @@ admin.site.register(Product, ProductAdmin)
 admin.site.register(Cart, CartAdmin)
 admin.site.register(Cart_Products, Cart_ProductsAdmin)
 admin.site.register(Discount, DiscountAdmin)
+admin.site.register(Coupon, CouponAdmin)
