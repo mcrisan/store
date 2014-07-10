@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% load staticfiles %}
+{% load cache %}
 
 {% block styling %}
 	{{ block.super }}
@@ -17,12 +18,13 @@
 	{% endif %}		
 </div>
 <div class="error col-md-12"></div>
+{% cache 60 homepage_sort_name old_type page_nr %}
 <div class="row">
 	 {% for prod in products.object_list %}
 	    {% include "home_product.html" with product=prod %}
 	 {% endfor %}
 </div>
-
+{% endcache %}
 <ul class="pager">
   {% if products.has_previous %}
     <li class="previous"><a href="{% url 'sort_by_name_pag' type=old_type page=page_nr|add:"-1"%}">Previous</a></li>	

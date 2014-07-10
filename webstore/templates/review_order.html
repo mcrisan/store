@@ -1,7 +1,9 @@
 {% extends "base.html" %}
 {% load staticfiles %}
+{% load cache %}
 
 {% block content %}
+{% cache 60 review_order cart.id cart.cart_amount %}
 <div class="cart_details container-fluid">
 	 <div class="cart_title"> Your cart details </div>
 	 <div class="row 'white' " data-id="{{product.product.id}}">
@@ -55,6 +57,6 @@
 		 </div>
 	 {% endif %}
  </div>	
-    
+ {% endcache %}   
     
 {% endblock content %}

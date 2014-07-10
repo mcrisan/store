@@ -1,11 +1,14 @@
 {% extends "base.html" %}
 {% load staticfiles %}
 {% load comments %}
+{% load cache %} 
+
 {% block styling %}
 	{{ block.super }}
 	<link rel="stylesheet" href="{% static 'rating/jquery.raty.css' %}"> 
 {% endblock styling %}
 {% block content %}
+{% cache 60 product_details product.id %}
 <div class="row">
 <div class="col-md-12 center"><h2>{{product.name}}</h2></div>
 
@@ -35,6 +38,7 @@
 		</div>
 </div>
 </div><br/><br/>
+{% endcache %}
 <div class="row">
 {% if user.is_authenticated %}
       {% include "partial/_comment_form.html" with product=product %}
@@ -42,9 +46,12 @@
     <p>Please <a href="{% url 'auth_login' %}">log in</a> to leave a comment.</p>
 {% endif %}
 </div>
+{% get_comment_count for product as comment_count %}
+{% cache 60 product_details product.id comment_count %}
 <div class="row">
 {% include "partial/_comments.html" with object=product %}
 </div>
+{% endcache %}
 {% endblock content %}
 
 {% block myscript %}

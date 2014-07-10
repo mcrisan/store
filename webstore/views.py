@@ -12,13 +12,13 @@ from django.core.paginator import Paginator
 from django.db.models import Count
 from django.contrib.comments.forms import CommentForm
 from django.contrib.comments import get_form
+from django.views.decorators.cache import cache_page
 
 from .forms import (RegisterForm, CartForm, RatingForm, ProductRatingsForm , 
                    DeliveryDetailsForm, UserEditForm, SearchForm, DiscountCodeForm)
 from .models import Cart, Product, Rating, DeliveryDetails, Discount, UserMethods, options
 from .tasks import send_order_email
 from .choices import DISCOUNT_STATUS_CHOICES, CART_STATUS_CHOICES
- 
    
 def home(request, page=1):
     products = Product.objects.order_by('name').all()
@@ -184,7 +184,7 @@ def review_order(request):
         form = DiscountCodeForm(data=request.POST)
         if form.is_valid():
             cart.apply_discount(form.data['code'])  
-            messages.add_message(request, messages.INFO, 'Your coupon has been applied')           
+            messages.add_message(request, messages.INFO, 'Your coupon has been applied to products in promotion')           
     return render(request, "review_order.html", {'cart':cart, 'form':form})     
 
 @login_required
@@ -224,14 +224,14 @@ def user_orders(request):
 def order_details(request, cart_id):
     current_user = request.user
     try:
-        products = (Cart.objects.filter(id=cart_id, 
+        order = (Cart.objects.filter(id=cart_id, 
                                         user=request.user, 
                                         status=CART_STATUS_CHOICES.ORDERED)
-                              .first().cart_products_set.all())
+                              .first())
     except AttributeError:
         messages.add_message(request, messages.INFO, 'We could not find the required order')
         return redirect('store_home')                               
-    return render(request, "order_details.html", {'products': products})
+    return render(request, "order_details.html", {'order': order})
 
 def edit_account(request):
     current_user = request.user 
@@ -273,7 +273,7 @@ def load_sidebar_cart(request):
         if current_user.cart_set.last().status == CART_STATUS_CHOICES.ACTIVE:
             cart = current_user.cart_set.last()    
             context['price'] = cart.cart_amount() 
-            context['prod'] = cart.cart_products_set.all()   
+            context['cart'] = cart 
     return context
 
 def load_sidebar_search(request):     

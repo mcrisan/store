@@ -1,9 +1,10 @@
 {% extends "base.html" %}
 {% load staticfiles %}
+{% load cache %}
 
 {% block content %}
 <h2>View our current offers</h2>
-
+{% cache 60 offers %}
     {% for offer in offers %}
     <div class="row">
     	 <div class="col-md-12"><h3>{{forloop.counter}}. {{offer.name}}</h3></div>
@@ -15,6 +16,6 @@
     	   	
     </div>
     {% endfor %}	
-    
+{% endcache %}    
     
 {% endblock content %}

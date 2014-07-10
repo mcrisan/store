@@ -1,7 +1,9 @@
 {% extends "base.html" %}
 {% load staticfiles %}
+{% load cache %}
 
 {% block content %}
+{% cache 60 order_details order.id %}
 <h2>View items in current order</h2>
 	<div class="row">
 		<div class="col-md-2">Nr</div>
@@ -10,7 +12,7 @@
 		<div class="col-md-2">Price</div>
 		<div class="col-md-2">Date</div>
 	</div>
-    {% for prod in products %}
+    {% for prod in order.cart_products_set.all %}
     <div class="row">
     	 <div class="col-md-2">{{forloop.counter}}</div>
     	 <div class="col-md-2">{{prod.product.name}}</div>
@@ -19,6 +21,6 @@
     	 <div class="col-md-2">{{prod.date_added}}</div>
     </div>
     {% endfor %}	
-    
+{% endcache %}    
     
 {% endblock content %}

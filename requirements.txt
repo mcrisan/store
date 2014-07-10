@@ -9,3 +9,4 @@ django-celery-with-redis==3.0
 django-mptt==0.6.1
 django-contrib-comments==1.5
 django-contrib-comments-auth==0.1.1
+python-memcached==1.5.3

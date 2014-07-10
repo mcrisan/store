@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% load staticfiles %}
+{% load cache %}
 
 {% block styling %}
 	{{ block.super }}
@@ -7,6 +8,7 @@
 {% endblock styling %}
 
 {% block content %}
+{% cache 60 product_search query %}
 <h3>Results for search term: {{query}}</h3>
 <div class="error col-md-12"></div>
 <div class="row">
@@ -14,7 +16,7 @@
 	    {% include "home_product.html" with product=prod %}
 	 {% endfor %}
 </div>
-
+{% endcache %}
     
 {% endblock content %}
 

@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% load staticfiles %}
+{% load cache %}
 
 {% block styling %}
 	{{ block.super }}
@@ -17,15 +18,14 @@
 	{% endif %}		
 </div>
 <div class="error col-md-12"></div>
+{% cache 60 homepage_products page_nr %}
 <div class="row">
 	 {% for prod in products.object_list %}
 	    {% include "home_product.html" with product=prod %}
 	 {% endfor %}
 </div>
-
+{% endcache %}
 {% include "partials/_pagination.html" with address='store_home_pag' page=products page_nr=page_nr %}
-
-    
 {% endblock content %}
 
 {% block myscript %}

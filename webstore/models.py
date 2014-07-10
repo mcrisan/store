@@ -218,8 +218,7 @@ class Coupon(Promotion):
         self.volume -= quantity
         self.save()
    
-      
-        
+            
 class Rating(models.Model):
     value = models.IntegerField("Value",)
     product = models.ForeignKey(Product)
@@ -288,10 +287,7 @@ class Cart(models.Model):
         prod_cart = self.cart_products_set.filter(product = prod).first()
         if prod_cart:
                old_quant = prod_cart.quantity
-               self.update_from_product_cart(prod_cart, 
-                                             quantity, 
-                                             prod.discounted_price(), 
-                                             prod.discount())
+               prod_cart.update(quantity)
                prod.modify_quantity(quantity - old_quant)
         else:
               prod_cart = self.add_product_cart(prod, quantity, prod.discount())
@@ -300,18 +296,11 @@ class Cart(models.Model):
                                             
     def add_product_cart(self, prod, quantity, discount): 
         prod_cart = (self.cart_products_set.
-                          create(product = prod, cart = self, quantity = quantity,
-                                 price = prod.discounted_price() * float(quantity),
-                                 date_added = datetime.datetime.now(),
-                                 discount = discount )) 
+                     create(product = prod, cart = self, quantity = quantity,
+                            price = prod.discounted_price() * float(quantity),
+                            date_added = datetime.datetime.now(),
+                            discount = discount )) 
         return prod_cart
-        
-    @staticmethod     
-    def update_from_product_cart(prod_cart, quantity, price, discount): 
-        prod_cart.quantity = quantity
-        prod_cart.price = price * float(quantity)
-        prod_cart.discount = discount
-        prod_cart.save()
         
     def cart_amount(self):
         price = self.cart_products_set.aggregate(Sum('price'))
@@ -338,7 +327,8 @@ class Cart(models.Model):
                                         status=DISCOUNT_STATUS_CHOICES.ACTIVE).
                                  first())
         for prod in self.cart_products_set.exclude(discount = coupon):
-            prod.save_discount(code)
+            prod.remove_coupon()
+            prod.save_coupon(code)
                 
     def real_value(self): 
         price =(self.cart_products_set.
@@ -367,19 +357,25 @@ class Cart_Products(models.Model):
     class Meta:
         verbose_name = "product in cart"
         
-    def remove_dicount(self):
+    def update(self, quantity):
+        old_quant = self.quantity 
+        self.quantity = quantity
+        self.price = self.product.discounted_price() * float(quantity)
+        self.discount = self.product.discount()
+        self.save()   
+        
+    def remove_coupon(self):
         if self.discount and hasattr(self.discount, 'coupon'):
-            coupon = self.discount.coupon
-            coupon.volume += self.quantity
-            coupon.save()
+            self.discount.coupon.volume += self.quantity
+            self.discount.coupon.save()
+            self.price = self.product.discounted_price() * self.quantity
+            self.discount = self.product.discount()
+            self.save()
             
-    def save_discount(self, code):
+    def save_coupon(self, code):
         coup = self.product.has_coupon(code)
         if coup and self.quantity <= coup.volume:
             self.price = (self.product.price - self.product.price * coup.percent/100) * self.quantity
-            if hasattr(self.discount, 'coupon'):
-                self.discount.coupon.volume +=self.quantity
-                self.discount.coupon.save()
             self.discount = coup
             self.save()  
             coup.modify_quantity(self.quantity)                     
