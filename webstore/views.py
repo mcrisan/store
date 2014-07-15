@@ -9,16 +9,23 @@ from django.contrib import messages
 from django.contrib.auth.signals import user_logged_in
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
+from django.core.urlresolvers import reverse
 from django.db.models import Count
 from django.contrib.comments.forms import CommentForm
 from django.contrib.comments import get_form
 from django.views.decorators.cache import cache_page
+from paypal.standard.forms import PayPalPaymentsForm
+from paypal.standard.ipn.signals import payment_was_successful
+from paypal.standard.ipn.models import PayPalIPN
+#from paypal.standard.pdt.signals import pdt_failed
+#from paypal.standard.ipn.views
 
 from .forms import (RegisterForm, CartForm, RatingForm, ProductRatingsForm , 
                    DeliveryDetailsForm, UserEditForm, SearchForm, DiscountCodeForm)
 from .models import Cart, Product, Rating, DeliveryDetails, Discount, UserMethods, options
 from .tasks import send_order_email
 from .choices import DISCOUNT_STATUS_CHOICES, CART_STATUS_CHOICES
+from django.conf import settings
    
 def home(request, page=1):
     products = Product.objects.order_by('name').all()
@@ -184,8 +191,47 @@ def review_order(request):
         form = DiscountCodeForm(data=request.POST)
         if form.is_valid():
             cart.apply_discount(form.data['code'])  
-            messages.add_message(request, messages.INFO, 'Your coupon has been applied to products in promotion')           
-    return render(request, "review_order.html", {'cart':cart, 'form':form})     
+            messages.add_message(request, messages.INFO, 'Your coupon has been applied to products in promotion')
+    return_url = reverse("success")
+    cancel_url = reverse("canceled")  
+    paypal_dict = {
+        "business": settings.PAYPAL_RECEIVER_EMAIL,
+        "amount": cart.cart_amount(),
+        "item_name": "webstore cart",
+        "invoice": cart.id,
+        "quantity": 1,
+        #"notify_url": "http://127.0.0.1:8000" + reverse('paypal-ipn'),
+        #"return_url": "http://localhost:8000" + return_url,
+        #"cancel_return": "http://localhost:8000" + cancel_url,
+        "notify_url": "http://2f657a73.ngrok.com" + reverse('paypal-ipn'),
+        "return_url": "http://localhost:8000" + return_url,
+        "cancel_return": "http://localhost:8000" + cancel_url,
+
+    }
+
+    pform = PayPalPaymentsForm(initial=paypal_dict)
+    context = {"pform": pform}                 
+    return render(request, "review_order.html", {'cart':cart, 'form':form, "pform": pform}) 
+
+def payment_success(request):
+    txn = request.GET.get('tx', None) 
+    try:   
+        order = PayPalIPN.objects.get(txn_id=txn)
+    except PayPalIPN.DoesNotExist: 
+        messages.add_message(request, messages.INFO, 'We could not locate your transaction')
+        return redirect('webstore:review_order') 
+    else:        
+        cart = Cart.objects.get(pk=order.invoice)
+        if cart.status == CART_STATUS_CHOICES.ORDERED:
+            messages.add_message(request, messages.INFO, 'Your transaction was processed')
+            return redirect('webstore:order_details', cart_id=cart.id) 
+        else: 
+            messages.add_message(request, messages.INFO, 'Your transaction is being processed') 
+            return redirect('webstore:review_order')              
+
+def payment_canceled(request):
+    messages.add_message(request, messages.INFO, 'Payment was canceled')
+    return redirect('webstore:review_order')   
 
 @login_required
 def checkout(request):
@@ -316,7 +362,17 @@ def save_cart(sender, user, request, **kwargs):
                 cart.check_product_cart(prod.product.id, prod.quantity)
                 product = Product.objects.get(pk = prod.product.id)
                 product.modify_quantity(0 - prod.quantity)
-            guest_user.delete()
-    
+            guest_user.delete()  
 
-user_logged_in.connect(save_cart)   
+user_logged_in.connect(save_cart)  
+
+def show_me_the_money(sender, **kwargs):
+    ipn_obj = sender
+    if (ipn_obj.payment_status == "Completed") & (ipn_obj.flag==False):
+        try:
+            cart=Cart.objects.get(pk=ipn_obj.invoice)
+            cart.create_order()
+        except Cart.DoesNotExist:
+            pass           
+
+payment_was_successful.connect(show_me_the_money) 

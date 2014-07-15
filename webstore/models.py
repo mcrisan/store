@@ -405,4 +405,4 @@ class DeliveryDetails(models.Model):
             details = {'address':delivery.address , 'phonenumber':delivery.phonenumber}  
         else:
             details = {'address': "" , 'phonenumber':""} 
-        return details       
+        return details         

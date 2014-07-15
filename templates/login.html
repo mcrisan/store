@@ -31,5 +31,8 @@ Please login
 	    <input class=" col-md-offset-9 btn btn-primary" type="submit" value="Login" />
 	    <input type="hidden" name="next" value="{{ next }}" />
 	</form>
+	
+	<a href="{% url 'socialauth_begin' 'facebook' %}">Login with FB</a>
+	<a href="{% url 'socialauth_begin' 'twitter' %}">Login with twitter</a>
     </div>
 {% endblock content %}

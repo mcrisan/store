@@ -45,9 +45,12 @@ INSTALLED_APPS = (
     'django.contrib.staticfiles',
     'django.contrib.comments',
     'south',
+    'debug_toolbar',
     'dbsettings',
     'djcelery',
     'webstore',
+    'paypal.standard.ipn',
+    'social_auth'
 )
 
 MIDDLEWARE_CLASSES = (
@@ -59,6 +62,34 @@ MIDDLEWARE_CLASSES = (
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'store.middlewares.UserMiddleware',
 )
+
+AUTHENTICATION_BACKENDS = (
+    'social_auth.backends.facebook.FacebookBackend',
+    'social_auth.backends.twitter.TwitterBackend',
+    'django.contrib.auth.backends.ModelBackend',
+)
+
+FACEBOOK_APP_ID              = '708254132555429'
+FACEBOOK_API_SECRET          = '63a80eb14a82774b7552ad8c26b19bbb'
+TWITTER_CONSUMER_KEY         = 'IMRGG9fR76Z1aR6nMCBZz4qOe'
+TWITTER_CONSUMER_SECRET      = 'QQUfZiIMatwdSFA0dP3hHDb1XK660Qa72ZCPAh4bYdzU77PSUO'
+
+SOCIAL_AUTH_COMPLETE_URL_NAME  = 'socialauth_complete'
+SOCIAL_AUTH_ASSOCIATE_URL_NAME = 'socialauth_associate_complete'
+
+FACEBOOK_EXTENDED_PERMISSIONS = ['email']
+
+SOCIAL_AUTH_PIPELINE = (
+    'social_auth.backends.pipeline.social.social_auth_user',
+    #'social_auth.backends.pipeline.associate.associate_by_email',
+    'social_auth.backends.pipeline.user.get_username',
+    'social_auth.backends.pipeline.user.create_user',
+    'social_auth.backends.pipeline.social.associate_user',
+    'social_auth.backends.pipeline.social.load_extra_data',
+    'social_auth.backends.pipeline.user.update_user_details'
+)
+
+SESSION_SERIALIZER='django.contrib.sessions.serializers.PickleSerializer'
 
 CACHES = {
     'default': {
@@ -72,7 +103,9 @@ ROOT_URLCONF = 'store.urls'
 
 WSGI_APPLICATION = 'store.wsgi.application'
 
-
+PAYPAL_TEST = True
+PAYPAL_RECEIVER_EMAIL = "crisan_mariusvlad-facilitator@yahoo.com"
+PAYPAL_IDENTITY_TOKEN = "-hSqcphpCSGu6n7HkOqokYH1ssfhGFVKejomDWrxYMNGMI3V26w_FCGRXt0"
 # Database
 # https://docs.djangoproject.com/en/1.6/ref/settings/#databases
 
@@ -108,9 +141,9 @@ USE_TZ = False
 STATIC_URL = '/static/'
 STATICFILES_DIRS = (os.path.join(BASE_DIR, "static"),)
 TEMPLATE_DIRS = [os.path.join(BASE_DIR, 'templates')]
-LOGIN_URL = 'store_login'
-LOGOUT_URL = 'store_logout'
-LOGIN_REDIRECT_URL = 'store_home'
+LOGIN_URL = '/login/'
+LOGOUT_URL = '/logout/'
+LOGIN_REDIRECT_URL = '/'
 
 TEMPLATE_CONTEXT_PROCESSORS = (
     "django.contrib.auth.context_processors.auth",

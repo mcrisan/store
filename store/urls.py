@@ -14,9 +14,13 @@ urlpatterns = patterns('',
     url(r'^editaccount', 'webstore.views.edit_account', name='edit_account'),
 
     url(r'^admin/', include(admin.site.urls)),
+    url(r'', include('social_auth.urls')),
     url(r'^createcom', 'webstore.views.comment', name='comment'),
     url(r'^comments/', include('django.contrib.comments.urls')),
     url(r'^settings/', include('dbsettings.urls')),
+    url(r'^paypal/ipn', include('paypal.standard.ipn.urls')),
+    url(r'^payment/success', 'webstore.views.payment_success', name='success'),
+    url(r'^payment/canceled', 'webstore.views.payment_canceled', name='canceled'),
     url(r'^store/', include('webstore.urls', namespace='webstore', app_name='webstore')),
     
     url(r'^login/$', 'django.contrib.auth.views.login',

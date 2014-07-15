@@ -30,7 +30,7 @@
 	 {% empty %}
 	 	<div class="row">Your cart is empty</div>
 	 {% endfor %}
-	 {% if prod %}
+	 {% if cart %}
 	 </br>
 	 	{% if cart.money_saved  %}
 		 <div class="total col-md-6 ">Total discount: {{cart.total_discount|floatformat:-2}}% | You saved: {{cart.money_saved|floatformat:-2}}</div>
@@ -55,6 +55,7 @@
 		 <div>
 		 	<a class="col-md-12 btn-info" href="{% url 'webstore:checkout' %}">Confirm order</a>
 		 </div>
+		 {{ pform.sandbox }}
 	 {% endif %}
  </div>	
  {% endcache %}   
