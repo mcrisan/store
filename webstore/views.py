@@ -15,11 +15,13 @@ from django.db.models import Count
 from django.contrib.comments.forms import CommentForm
 from django.contrib.comments import get_form
 from django.views.decorators.cache import cache_page
+from django.views.decorators.csrf import csrf_exempt
 from paypal.standard.forms import PayPalPaymentsForm
 from paypal.standard.ipn.signals import payment_was_successful
 from paypal.standard.ipn.models import PayPalIPN
 from open_facebook import OpenFacebook
 from social_auth.models import UserSocialAuth
+from notifications import notify
 #from paypal.standard.pdt.signals import pdt_failed
 #from paypal.standard.ipn.views
 
@@ -87,7 +89,6 @@ def post_comment(request):
 def comment(request) :
     if request.method == 'POST' :
         prod_id = request.POST['object_pk']
-        print prod_id
         prod = Product.objects.get(pk=prod_id)
         post_values = request.POST.copy()
         post_values['name']= request.user.first_name + request.user.last_name
@@ -166,8 +167,27 @@ def create_cart(request):
                  "quantity": data['qty'],
                  "prod_id": data['prod_id'],
                  "stock" : prod.quantity,
-                 "total_price" : cart.cart_amount()}   
+                 "total_price" : cart.cart_amount()}
+        #ipdb.set_trace()
+        notify.send(prod,
+                    recipient=current_user,
+                    verb=u'Has been added to your cart',
+                    action_object=cart, 
+                    description=u'We have updated your cart with the wanted product', 
+                    )   
     return HttpResponse(json.dumps(context), content_type="application/json") 
+
+@csrf_exempt
+def notifications(request):
+    current_user = request.user
+    notifications = current_user.notifications.all()
+    i=0
+    for notification in current_user.notifications.filter(unread=True):
+        i +=1
+        notification.mark_as_read()
+    context ={'unread_count': i}    
+    #ipdb.set_trace()    
+    return render(request, "notifications.html", context)
 
 @login_required
 def delivery_details(request):
@@ -193,8 +213,17 @@ def review_order(request):
     if request.method == 'POST':      
         form = DiscountCodeForm(data=request.POST)
         if form.is_valid():
-            cart.apply_discount(form.data['code'])  
-            messages.add_message(request, messages.INFO, 'Your coupon has been applied to products in promotion')
+            coupon = cart.apply_discount(form.data['code'])
+            if coupon: 
+                notify.send(coupon,
+                    recipient=request.user,
+                    verb=u'has been applied',
+                    action_object=cart, 
+                    description=u'We have updated your cart with the wanted product', 
+                )
+                messages.add_message(request, messages.INFO, 'Your coupon has been applied to products in promotion')
+            else:
+                messages.add_message(request, messages.INFO, 'Your coupon is not valid')    
     return_url = reverse("success")
     cancel_url = reverse("canceled")  
     paypal_dict = {
@@ -206,7 +235,7 @@ def review_order(request):
         #"notify_url": "http://127.0.0.1:8000" + reverse('paypal-ipn'),
         #"return_url": "http://localhost:8000" + return_url,
         #"cancel_return": "http://localhost:8000" + cancel_url,
-        "notify_url": "http://2f657a73.ngrok.com" + reverse('paypal-ipn'),
+        "notify_url": "http://5f1a21b4.ngrok.com" + reverse('paypal-ipn'), 
         "return_url": "http://localhost:8000" + return_url,
         "cancel_return": "http://localhost:8000" + cancel_url,
 
@@ -226,6 +255,12 @@ def payment_success(request):
     else:        
         cart = Cart.objects.get(pk=order.invoice)
         if cart.status == CART_STATUS_CHOICES.ORDERED:
+            notify.send(cart,
+                recipient=request.user,
+                verb=u'order has been processed',
+                action_object=cart, 
+                description=u'We have updated your cart with the wanted product', 
+            )
             messages.add_message(request, messages.INFO, 'Your transaction was processed')
             return redirect('webstore:order_details', cart_id=cart.id) 
         else: 
@@ -241,7 +276,7 @@ def checkout(request):
     current_user = request.user
     cart = current_user.cart_set.filter(status=CART_STATUS_CHOICES.ACTIVE).first()
     if cart:
-        cart.create_order()
+        cart.create_order() 
         messages.add_message(request, messages.INFO, 'Your order was created')
         send_order_email.delay(request.user)
         return redirect('webstore:order_details', cart_id=cart.id)
@@ -258,7 +293,7 @@ def delete_prod(request, prod_id):
         if prod:
             product = Product.objects.get(pk = prod_id)
             product.modify_quantity(0 - prod.quantity)
-            prod.remove_dicount()
+            prod.remove_coupon()
             prod.delete()
             messages.add_message(request, messages.INFO, 'Product was deleted')                            
     return redirect('store_home')
@@ -300,8 +335,6 @@ def edit_account(request):
         token = instance.tokens['access_token']
         graph = OpenFacebook(token)
     current_user.get_profile()
-    #ipdb.set_trace()
-    #ipdb.set_trace()
     return render(request, 'edit_user.html',{'form':form})
 
 def offers(request):

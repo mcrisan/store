@@ -1,3 +1,4 @@
+{% load notifications_tags %}
  <!-- Static navbar -->
       <div class="navbar navbar-default" role="navigation">
         <div class="container-fluid">
@@ -17,6 +18,16 @@
             <ul class="nav navbar-nav navbar-right">
                 <li><a href="{% url 'webstore:offers' %}">Offers</a></li>
             {% if user.is_authenticated %}
+             <li >{% notifications_unread as unread_count %}
+	 			<a class="notification dropdown-toggle" data-toggle="dropdown" href="#">
+		 			<i class="fa fa-bullhorn fa-2x"></i>
+		 			{% if unread_count %}
+		 				<span class="notifications_count_class">{{ unread_count }}</span>
+		 			{% endif %}
+	 			</a>
+	 			<ul id="dropdown" class="dropdown-menu">
+			    </ul>
+             </li>
             	<li><a href="{% url 'edit_account' %}">Edit Account</a></li>
             	<li><a href="{% url 'webstore:orders' %}">Orders</a></li>
                 <li><a href="{% url 'store_logout' %}">Logout</a></li>

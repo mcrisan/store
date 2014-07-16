@@ -17,4 +17,5 @@ urlpatterns = patterns('',
     url(r'^search/page(?P<page>[0-9]+)/$', views.search, name='search_pag'),
     url(r'^offers', views.offers, name='offers'),
     url(r'^offer_details/(?P<offer_id>\d+)/$', views.offer_details, name='offer_details'),
+    url(r'^notification', 'webstore.views.notifications', name='notifications'),
 )

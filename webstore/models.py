@@ -287,6 +287,10 @@ class Cart(models.Model):
     
     def __unicode__(self): 
         return self.user.username
+    
+    def get_absolute_url(self):
+        from django.core.urlresolvers import reverse
+        return reverse('webstore:review_order')
      
     @staticmethod   
     def from_user(user):
@@ -340,9 +344,13 @@ class Cart(models.Model):
         coupon = (Coupon.objects.filter(code__exact=code, 
                                         status=DISCOUNT_STATUS_CHOICES.ACTIVE).
                                  first())
+        cart_has_coupon=False
         for prod in self.cart_products_set.exclude(discount = coupon):
             prod.remove_coupon()
-            prod.save_coupon(code)
+            if prod.save_coupon(code):
+                cart_has_coupon=True
+        if cart_has_coupon:
+            return coupon    
                 
     def real_value(self): 
         price =(self.cart_products_set.
@@ -392,7 +400,8 @@ class Cart_Products(models.Model):
             self.price = (self.product.price - self.product.price * coup.percent/100) * self.quantity
             self.discount = coup
             self.save()  
-            coup.modify_quantity(self.quantity)                     
+            coup.modify_quantity(self.quantity)  
+            return True                   
                 
 
 class DeliveryDetails(models.Model):

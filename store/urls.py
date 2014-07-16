@@ -1,6 +1,8 @@
 from django.conf.urls import patterns, include, url
 
 from django.contrib import admin
+import notifications
+
 admin.autodiscover()
 
 urlpatterns = patterns('',
@@ -15,6 +17,7 @@ urlpatterns = patterns('',
 
     url(r'^admin/', include(admin.site.urls)),
     url(r'', include('social.apps.django_app.urls', namespace='social')),
+    url('^inbox/notifications/', include(notifications.urls)),
     url(r'^createcom', 'webstore.views.comment', name='comment'),
     url(r'^comments/', include('django.contrib.comments.urls')),
     url(r'^settings/', include('dbsettings.urls')),

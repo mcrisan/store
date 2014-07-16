@@ -136,6 +136,30 @@ body {
 	text-align:center;
 }
 
+.notifications_count_class{
+	position: absolute;
+    top: 0px;
+    right: 0px;
+    background-color:red;
+    min-height: 27px;
+    min-width: 26px;
+    -moz-border-radius: 15px;
+	border-radius: 15px;
+	color: white;
+	font-size: 1.5em;
+	text-align:center;
+}
+
+#dropdown{
+	text-transform:capitalize;
+	font-weight:normal;
+	font-size: 12px;
+}
+
+.unread{
+	background-color: #C0C0C0;
+}
+
 .list-price{
 	text-decoration:line-through;
 	font-weight:bold;

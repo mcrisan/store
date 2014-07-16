@@ -1,0 +1,11 @@
+{% for notif in user.notifications.all|slice:":5" %}
+	{% if forloop.counter <= unread_count %}
+		<li class="unread"><a tabindex="-1" href="{{ notif.action_object.get_absolute_url }}">{{notif.actor.name}} {{notif.verb}}</a></li>
+	{% else %}
+ 		 <li><a tabindex="-1" href="{{ notif.action_object.get_absolute_url }}">{{notif.actor.name}} {{notif.verb}}</a></li>
+  {% endif %}
+{% endfor %}
+
+
+
+

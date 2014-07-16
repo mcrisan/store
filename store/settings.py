@@ -51,7 +51,8 @@ INSTALLED_APPS = (
     'webstore',
     'paypal.standard.ipn',
     'social.apps.django_app.default',
-    'django_facebook'
+    'django_facebook',
+    'notifications'
 )
 
 MIDDLEWARE_CLASSES = (
