@@ -13,3 +13,5 @@ python-memcached==1.5.3
 django-debug-toolbar==1.2.1
 django-paypal==0.1.3
 django-social-auth==0.7.28
+python-social-auth==0.1.26
+django-facebook==6.0.1

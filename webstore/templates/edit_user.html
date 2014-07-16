@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-
+{% load staticfiles %}
 {% block title %}
 Create a new account
 {% endblock title %}
@@ -35,5 +35,18 @@ Create a new account
 			
             <button type="submit" class="col-md-offset-9">Edit account</button>
         </form>
+        
+        <div id="fb-root"></div>
+		<a href='#' onclick="FacebookInviteFriends();">
+			<img src="{% static 'images/facebok_invite_banner.png' %}" />
+		</a> 
+        
     </div>
+       
+    
 {% endblock content %}
+
+{% block myscript %}
+    <script src="http://connect.facebook.net/en_US/all.js"></script>
+	<script src="{% static 'script/invite_friends.js' %}"></script>
+{% endblock myscript %}

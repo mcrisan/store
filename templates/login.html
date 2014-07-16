@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load staticfiles %}
 
 {% block title %}
 Please login
@@ -32,7 +33,7 @@ Please login
 	    <input type="hidden" name="next" value="{{ next }}" />
 	</form>
 	
-	<a href="{% url 'socialauth_begin' 'facebook' %}">Login with FB</a>
-	<a href="{% url 'socialauth_begin' 'twitter' %}">Login with twitter</a>
+	<a href="{% url 'social:begin' 'facebook' %}"><img src="{% static 'images\facebook.png' %}" /></a>
+	<a href="{% url 'social:begin' 'twitter' %}"><img src="{% static 'images\twitter.png' %}" /></a>
     </div>
 {% endblock content %}

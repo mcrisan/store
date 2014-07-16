@@ -50,7 +50,8 @@ INSTALLED_APPS = (
     'djcelery',
     'webstore',
     'paypal.standard.ipn',
-    'social_auth'
+    'social.apps.django_app.default',
+    'django_facebook'
 )
 
 MIDDLEWARE_CLASSES = (
@@ -62,32 +63,42 @@ MIDDLEWARE_CLASSES = (
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'store.middlewares.UserMiddleware',
 )
-
 AUTHENTICATION_BACKENDS = (
-    'social_auth.backends.facebook.FacebookBackend',
-    'social_auth.backends.twitter.TwitterBackend',
+    'social.backends.facebook.Facebook2OAuth2',
+    'social.backends.twitter.TwitterOAuth',
     'django.contrib.auth.backends.ModelBackend',
 )
 
-FACEBOOK_APP_ID              = '708254132555429'
-FACEBOOK_API_SECRET          = '63a80eb14a82774b7552ad8c26b19bbb'
-TWITTER_CONSUMER_KEY         = 'IMRGG9fR76Z1aR6nMCBZz4qOe'
-TWITTER_CONSUMER_SECRET      = 'QQUfZiIMatwdSFA0dP3hHDb1XK660Qa72ZCPAh4bYdzU77PSUO'
+AUTH_PROFILE_MODULE = 'webstore.UserProfile'
+
+FACEBOOK_APP_ID                 = '708254132555429'
+FACEBOOK_API_SECRET             = '63a80eb14a82774b7552ad8c26b19bbb'
+SOCIAL_AUTH_FACEBOOK_KEY        = '708254132555429'
+SOCIAL_AUTH_FACEBOOK_SECRET     = '63a80eb14a82774b7552ad8c26b19bbb'
+SOCIAL_AUTH_TWITTER_KEY         = 'IMRGG9fR76Z1aR6nMCBZz4qOe'
+SOCIAL_AUTH_TWITTER_SECRET      = 'QQUfZiIMatwdSFA0dP3hHDb1XK660Qa72ZCPAh4bYdzU77PSUO'
+
+#SOCIAL_AUTH_USER_MODEL = 'django.contrib.auth.models.User'
 
 SOCIAL_AUTH_COMPLETE_URL_NAME  = 'socialauth_complete'
 SOCIAL_AUTH_ASSOCIATE_URL_NAME = 'socialauth_associate_complete'
 
-FACEBOOK_EXTENDED_PERMISSIONS = ['email']
+SOCIAL_AUTH_FACEBOOK_SCOPE = ['email', 'user_birthday', 'user_hometown', 'user_location',
+                              'user_interests', 'user_photos']
 
 SOCIAL_AUTH_PIPELINE = (
-    'social_auth.backends.pipeline.social.social_auth_user',
-    #'social_auth.backends.pipeline.associate.associate_by_email',
-    'social_auth.backends.pipeline.user.get_username',
-    'social_auth.backends.pipeline.user.create_user',
-    'social_auth.backends.pipeline.social.associate_user',
-    'social_auth.backends.pipeline.social.load_extra_data',
-    'social_auth.backends.pipeline.user.update_user_details'
+    'social.pipeline.social_auth.social_details',
+    'social.pipeline.social_auth.social_uid',
+    'social.pipeline.social_auth.auth_allowed',
+    'social.pipeline.social_auth.social_user',
+    'social.pipeline.user.get_username',
+    'social.pipeline.user.create_user',
+    'social.pipeline.social_auth.associate_user',
+    'social.pipeline.social_auth.load_extra_data',
+    'social.pipeline.user.user_details',
+    'webstore.pipeline.user_details'
 )
+
 
 SESSION_SERIALIZER='django.contrib.sessions.serializers.PickleSerializer'
 
@@ -152,7 +163,10 @@ TEMPLATE_CONTEXT_PROCESSORS = (
     "django.core.context_processors.media",
     "django.core.context_processors.static",
     "django.core.context_processors.tz",
+    "django.core.context_processors.request",
     "django.contrib.messages.context_processors.messages",
+    "social.apps.django_app.context_processors.backends",
+    "social.apps.django_app.context_processors.login_redirect",
     "webstore.views.load_sidebar_cart",
     "webstore.views.load_sidebar_search"
 )

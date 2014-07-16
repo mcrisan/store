@@ -13,7 +13,7 @@ from mptt.models import MPTTModel, TreeForeignKey
 from django.contrib.comments.moderation import CommentModerator, moderator
 
 from store.site_settings import SiteSettings
-from .choices import DISCOUNT_STATUS_CHOICES, CART_STATUS_CHOICES
+from .choices import DISCOUNT_STATUS_CHOICES, CART_STATUS_CHOICES, USER_GENDER_CHOICES
 
 options = SiteSettings('Site Settings')
 
@@ -69,6 +69,20 @@ class UserMethods(User):
         proxy=True
         verbose_name = "User Statistics"
         verbose_name_plural = "User Statistics"
+
+
+class UserProfile(models.Model):
+    user = models.OneToOneField(User)
+    gender = models.CharField(max_length=20, null=True, blank=True,
+                              choices=USER_GENDER_CHOICES.choices)
+    location = models.CharField(max_length=250, null=True, blank=True)
+    hometown = models.CharField(max_length=250, null=True, blank=True)
+    birthday = models.DateField(blank=True, null=True)
+    locale = models.CharField(max_length=10, blank=True, null=True)
+    photo_url = models.URLField("Photo URL")
+    
+    def __unicode__(self):
+        return u'%s profile' % self.user.username
 
 
 class Category(models.Model):

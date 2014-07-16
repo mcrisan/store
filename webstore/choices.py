@@ -22,6 +22,10 @@ CART_STATUS_CHOICES = Choice(ACTIVE=('0', 'Active'),
 HAS_DISCOUNT_CHOICES = Choice(NO=('0', 'No'),
                               YES=('1', 'Yes'),                               
                              )
+
+USER_GENDER_CHOICES = Choice(MALE=('male', 'Male'),
+                             FEMALE=('female', 'Female'),                               
+                             )
      
   
 

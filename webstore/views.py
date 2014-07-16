@@ -2,6 +2,7 @@ import datetime
 import json
 import ipdb
 
+from pprint import pprint
 from django.shortcuts import render, redirect
 from django.http import HttpResponse, HttpResponseRedirect
 from django.contrib.auth.models import User
@@ -17,6 +18,8 @@ from django.views.decorators.cache import cache_page
 from paypal.standard.forms import PayPalPaymentsForm
 from paypal.standard.ipn.signals import payment_was_successful
 from paypal.standard.ipn.models import PayPalIPN
+from open_facebook import OpenFacebook
+from social_auth.models import UserSocialAuth
 #from paypal.standard.pdt.signals import pdt_failed
 #from paypal.standard.ipn.views
 
@@ -288,6 +291,17 @@ def edit_account(request):
             return redirect('store_home')
     else:
         form = UserEditForm(instance=current_user) 
+    #ipdb.set_trace()
+    try:    
+        instance = UserSocialAuth.objects.get(user=request.user, provider='facebook')
+    except UserSocialAuth.DoesNotExist:    
+        pass
+    else:
+        token = instance.tokens['access_token']
+        graph = OpenFacebook(token)
+    current_user.get_profile()
+    #ipdb.set_trace()
+    #ipdb.set_trace()
     return render(request, 'edit_user.html',{'form':form})
 
 def offers(request):

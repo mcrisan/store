@@ -14,7 +14,7 @@ urlpatterns = patterns('',
     url(r'^editaccount', 'webstore.views.edit_account', name='edit_account'),
 
     url(r'^admin/', include(admin.site.urls)),
-    url(r'', include('social_auth.urls')),
+    url(r'', include('social.apps.django_app.urls', namespace='social')),
     url(r'^createcom', 'webstore.views.comment', name='comment'),
     url(r'^comments/', include('django.contrib.comments.urls')),
     url(r'^settings/', include('dbsettings.urls')),
