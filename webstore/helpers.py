@@ -1,3 +1,7 @@
+import hashlib
+
+from django.utils.http import urlquote
+
 from django.contrib.auth.models import User
 
 def get_user(request):
@@ -21,3 +25,13 @@ def check_user(request):
         except KeyError:
            current_user=None 
     return current_user 
+
+
+def template_cache_key(fragment_name, *vary_on):
+    """Builds a cache key for a template fragment.
+
+    This is shamelessly stolen from Django core.
+    """
+    base_cache_key = "template.cache.%s" % fragment_name
+    args = hashlib.md5(u":".join([urlquote(var) for var in vary_on]))
+    return "%s.%s" % (base_cache_key, args.hexdigest())

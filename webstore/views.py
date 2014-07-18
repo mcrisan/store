@@ -352,3 +352,27 @@ def products_categories(request, name, page=1):
                "page_nr" : page, 
                "name": category.name}
     return render(request, "categories.html", context)
+
+def add_to_wishlist(request, prod_id):
+    current_user = request.user
+    try:
+        product = Product.objects.get(pk=prod_id)
+        message = product.add_to_wishlist(current_user)
+        messages.add_message(request, messages.INFO, message)
+    except Product.DoesNotExist:
+        messages.add_message(request, messages.INFO, 'Product does not exist')
+    return redirect('store_home') 
+
+def remove_from_wishlist(request, prod_id):
+    current_user = request.user
+    try:
+        product = Product.objects.get(pk=prod_id)
+        message = product.remove_from_wishlist(current_user)
+        messages.add_message(request, messages.INFO, message)
+    except Product.DoesNotExist:
+        messages.add_message(request, messages.INFO, 'Product does not exist')
+    return redirect('store_home') 
+
+def check_wishlist(request):
+    products = Product.objects.order_by('name').all()
+    

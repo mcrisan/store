@@ -20,4 +20,7 @@ urlpatterns = patterns('',
     url(r'^notification', 'webstore.views.notifications', name='notifications'),
     url(r'^category/(?P<name>\w+)/$', views.products_categories, name='category'),
     url(r'^category/(?P<name>\w+)/page(?P<page>[0-9]+)/$', views.products_categories, name='category_pag'),
+    url(r'^add_wishlist/(?P<prod_id>\d+)/$', views.add_to_wishlist, name='add_to_wishlist'),
+    url(r'^remove_wishlist/(?P<prod_id>\d+)/$', views.remove_from_wishlist, name='remove_from_wishlist'),
+    url(r'^check_wishlist/$', views.check_wishlist, name='check_wishlist'),
 )

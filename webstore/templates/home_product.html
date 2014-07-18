@@ -1,4 +1,4 @@
-
+{% load webstore_filters %}
 <div class="col-md-4">
 	<div class="product">
 		<div class="product_title">
@@ -26,7 +26,14 @@
 				<span id="stock{{product.id}}">{{product.quantity}}</span> 
 			</span><br/>
 			<div class="col-md-4 rating_label">Rating: </div><div id ="{{product.id}}" data-rate=0 class="rating col-md-7"></div><br/><br/>
-			<span><button data-prod="{{product.id}}" data-qty="{{product.quantity}}" class="col-md-12 cart ">Add to cart</button> </span> <br/>
+			<span><button data-prod="{{product.id}}" data-qty="{{product.quantity}}" class="col-md-12 cart ">Add to cart</button> </span> <br/><br/>
+			<span class="wishlist col-md-12 center">
+			  {% if product|is_on_wishlist:user %}
+				<a href="{% url 'webstore:remove_from_wishlist' prod_id=product.id %}">Remove from wishlist</a> 
+			  {% else %}
+			  	<a href="{% url 'webstore:add_to_wishlist' prod_id=product.id %}">Add to wishlist</a>	
+			  {% endif %}	
+			</span> <br/>
 			<span class="error"></span>
 		</div>
 	</div>

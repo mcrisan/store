@@ -1,0 +1,5 @@
+{% if product|is_on_wishlist:user %}
+	<a href="{% url 'webstore:remove_from_wishlist' prod_id=product.id %}">Remove from wishlist</a> 
+{% else %}
+	<a href="{% url 'webstore:add_to_wishlist' prod_id=product.id %}">Add to wishlist</a>	
+{% endif %}

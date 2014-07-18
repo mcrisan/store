@@ -82,10 +82,8 @@ SOCIAL_AUTH_TWITTER_SECRET      = 'QQUfZiIMatwdSFA0dP3hHDb1XK660Qa72ZCPAh4bYdzU7
 
 SOCIAL_AUTH_COMPLETE_URL_NAME  = 'socialauth_complete'
 SOCIAL_AUTH_ASSOCIATE_URL_NAME = 'socialauth_associate_complete'
-
 SOCIAL_AUTH_FACEBOOK_SCOPE = ['email', 'user_birthday', 'user_hometown', 'user_location',
                               'user_interests', 'user_photos']
-
 SOCIAL_AUTH_PIPELINE = (
     'social.pipeline.social_auth.social_details',
     'social.pipeline.social_auth.social_uid',
@@ -117,18 +115,15 @@ WSGI_APPLICATION = 'store.wsgi.application'
 PAYPAL_TEST = True
 PAYPAL_RECEIVER_EMAIL = "crisan_mariusvlad-facilitator@yahoo.com"
 PAYPAL_IDENTITY_TOKEN = "-hSqcphpCSGu6n7HkOqokYH1ssfhGFVKejomDWrxYMNGMI3V26w_FCGRXt0"
-# Database
-# https://docs.djangoproject.com/en/1.6/ref/settings/#databases
 
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql_psycopg2',
-        'NAME': 'store',                      # Or path to database file if using sqlite3.
-            # The following settings are not used with sqlite3:
+        'NAME': 'store',
         'USER': 'marius',
         'PASSWORD': 'marius',
-        'HOST': 'localhost',                      # Empty for localhost through domain sockets or           '127.0.0.1' for localhost through TCP.
-        'PORT': '',                      # Set to empty string for default.
+        'HOST': 'localhost',                               
+        'PORT': '',                      
     }
 }
 
@@ -176,7 +171,6 @@ SITE_ID = 1
 
 #celery
 celery_app.conf.update(
-    #CELERY_RESULT_BACKEND='djcelery.backends.cache:CacheBackend',
     BROKER_URL = 'redis://localhost:6379/0',
     CELERY_RESULT_BACKEND = 'redis://localhost:6379/0',
 )

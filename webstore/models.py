@@ -11,9 +11,11 @@ from phonenumber_field.modelfields import PhoneNumberField
 from django.core.validators import MaxLengthValidator
 from mptt.models import MPTTModel, TreeForeignKey
 from django.contrib.comments.moderation import CommentModerator, moderator
+from django.core.cache import cache
 
 from store.site_settings import SiteSettings
 from .choices import DISCOUNT_STATUS_CHOICES, CART_STATUS_CHOICES, USER_GENDER_CHOICES
+from .helpers import template_cache_key
 
 options = SiteSettings('Site Settings')
 
@@ -74,7 +76,8 @@ class ProxyUser(User):
         return self.cart_set.filter(products__id=prod_id, status='1').exists() 
     
     def active_cart(self):
-        return self.cart_set.filter(status=CART_STATUS_CHOICES.ACTIVE).first()                
+        return self.cart_set.filter(status=CART_STATUS_CHOICES.ACTIVE).first() 
+               
 
     class Meta:
         proxy=True
@@ -192,6 +195,30 @@ class Product(models.Model):
                                               status=DISCOUNT_STATUS_CHOICES.ACTIVE).first()
         if promotion:
             return promotion.coupon
+        
+    def add_to_wishlist(self, user):
+        if not self.wishlist_set.filter(user=user).first():  
+            self.wishlist_set.create(user=user, product=self) 
+            message ="Product was added" 
+            #cache_key = template_cache_key('homepage_products', 1)
+            #ipdb.set_trace()
+            #cache.delete(cache_key)
+        else:
+            message ="Product is already on your wishlist"
+        return message 
+    
+    def remove_from_wishlist(self, user):
+        prod = self.wishlist_set.filter(user=user).first()
+        if prod:  
+            prod.delete()
+            message ="Product was removed"
+        else:
+            message ="Product was not found on your wishlist"
+        return message
+    
+    def is_on_wishlist(self, user):
+        if self.wishlist_set.filter(user=user).first():  
+            return True     
         
 
 class ProductModerator(CommentModerator):
@@ -461,4 +488,14 @@ class DeliveryDetails(models.Model):
             details = {'address':delivery.address , 'phonenumber':delivery.phonenumber}  
         else:
             details = {'address': "" , 'phonenumber':""} 
-        return details         
+        return details     
+    
+    
+class WishList(models.Model):
+    user = models.ForeignKey(User)
+    product = models.ForeignKey(Product)
+    date_created = models.DateField(default=datetime.datetime.now())
+
+    def __unicode__(self):
+        return self.user.name
+         
