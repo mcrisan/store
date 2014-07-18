@@ -160,6 +160,14 @@ body {
 	background-color: #C0C0C0;
 }
 
+#my-account .btn{
+	margin-top: 10px;
+}
+.profile_photo{
+	width: 25px;
+	height: 21px;
+}
+
 .list-price{
 	text-decoration:line-through;
 	font-weight:bold;

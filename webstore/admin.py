@@ -169,7 +169,6 @@ class ProductAdmin(admin.ModelAdmin):
     search_fields = ['name']
     inlines = [RatingInline]
     form = ProductForm
-    #list_filter = ('discount', 'category')
     list_filter = ( 'promotion', 'category')  
 
 class PromotionAdmin(admin.ModelAdmin):
@@ -278,11 +277,9 @@ class UserMethodsAdmin(admin.ModelAdmin):
      
     
     def has_add_permission(self, request):
-        # Nobody is allowed to add
         return False
     
     def has_delete_permission(self, request, obj=None):
-        # Nobody is allowed to delete
         return False
     
     def __init__(self, *args, **kwargs):

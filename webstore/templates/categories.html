@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% load staticfiles %}
+{% load cache %}
+
+{% block styling %}
+	{{ block.super }}
+	<link rel="stylesheet" href="{% static 'rating/jquery.raty.css' %}"> 
+{% endblock styling %}
+
+{% block content %}
+<h3>View products in category {{name}}</h3>
+{% if products.object_list.count > 0 %}
+<div class="col-md-5">Sort by: 
+	<a href="{% url 'sort_by_name' type=type %}">name</a> | 
+	<a href="{% url 'sort_by_popularity' type=type %}">popularity</a>
+	{% if type == 1 %}
+		<span>Ascending</span>
+	{% elif type == 0 %}
+		<span>Descending</span>
+	{% endif %}		
+</div>
+{% endif %}
+<div class="error col-md-12"></div>
+{% cache 60 products_category name page_nr %}
+<div class="row">
+	 {% for prod in products.object_list %}
+	    {% include "home_product.html" with product=prod %}
+	 {% empty %}
+	    There are no products in this category   
+	 {% endfor %}
+</div>
+{% endcache %}
+<ul class="pager">
+  {% if products.has_previous %}
+    <li class="previous"><a href="{% url 'category_pag' type=old_type page=page_nr|add:"-1"%}">Previous</a></li>	
+  {% endif %} 
+  {% if products.has_next %}	
+    <li class="next"><a href="{% url 'category_pag' type=old_type page=page_nr|add:"1"%}">Next</a></li>	
+  {% endif %}	
+</ul>
+{% endblock content %}
+
+{% block myscript %}
+	<script src="{% static 'script/cart.js' %}"></script>
+	<script src="{% static 'rating/jquery.raty.js' %}"></script>
+	<script src="{% static 'rating/home_rating.js' %}"></script>
+{% endblock myscript %}

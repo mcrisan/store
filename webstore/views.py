@@ -7,7 +7,7 @@ from django.shortcuts import render, redirect
 from django.http import HttpResponse, HttpResponseRedirect
 from django.contrib.auth.models import User
 from django.contrib import messages
-from django.contrib.auth.signals import user_logged_in
+
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.core.urlresolvers import reverse
@@ -17,20 +17,18 @@ from django.contrib.comments import get_form
 from django.views.decorators.cache import cache_page
 from django.views.decorators.csrf import csrf_exempt
 from paypal.standard.forms import PayPalPaymentsForm
-from paypal.standard.ipn.signals import payment_was_successful
 from paypal.standard.ipn.models import PayPalIPN
-from open_facebook import OpenFacebook
 from social_auth.models import UserSocialAuth
 from notifications import notify
-#from paypal.standard.pdt.signals import pdt_failed
-#from paypal.standard.ipn.views
 
 from .forms import (RegisterForm, CartForm, RatingForm, ProductRatingsForm , 
                    DeliveryDetailsForm, UserEditForm, SearchForm, DiscountCodeForm)
-from .models import Cart, Product, Rating, DeliveryDetails, Discount, UserMethods, options
+from .models import (Cart, Product, Rating, DeliveryDetails, Discount, UserMethods, options,
+                     Category)
 from .tasks import send_order_email
 from .choices import DISCOUNT_STATUS_CHOICES, CART_STATUS_CHOICES
 from django.conf import settings
+from .helpers import get_user, check_user
    
 def home(request, page=1):
     products = Product.objects.order_by('name').all()
@@ -76,7 +74,6 @@ def comment_form(request):
 def post_comment(request):
     if request.method == 'POST':
         prod_id = request.POST['object_pk']
-        print prod_id
         prod = Product.objects.get(pk=prod_id)
         form = CommentForm(target_object=prod, data=request.POST)
         if form.is_valid():
@@ -96,8 +93,7 @@ def comment(request) :
         comm_form = get_form()
         form = comm_form(target_object=prod, data=post_values)
         if (form.is_valid()) :
-            form.save()
-        ipdb.set_trace()   
+            form.save()  
         return HttpResponseRedirect(request.POST['next'])
     return HttpResponseRedirect('/')
 
@@ -168,14 +164,14 @@ def create_cart(request):
                  "prod_id": data['prod_id'],
                  "stock" : prod.quantity,
                  "total_price" : cart.cart_amount()}
-        #ipdb.set_trace()
         notify.send(prod,
                     recipient=current_user,
                     verb=u'Has been added to your cart',
                     action_object=cart, 
                     description=u'We have updated your cart with the wanted product', 
                     )   
-    return HttpResponse(json.dumps(context), content_type="application/json") 
+    context ={'cart': cart, 'price': cart.cart_amount()}      
+    return render(request, "partials/sidebar/_cart.html", context)    
 
 @csrf_exempt
 def notifications(request):
@@ -185,8 +181,7 @@ def notifications(request):
     for notification in current_user.notifications.filter(unread=True):
         i +=1
         notification.mark_as_read()
-    context ={'unread_count': i}    
-    #ipdb.set_trace()    
+    context ={'unread_count': i}       
     return render(request, "notifications.html", context)
 
 @login_required
@@ -326,15 +321,6 @@ def edit_account(request):
             return redirect('store_home')
     else:
         form = UserEditForm(instance=current_user) 
-    #ipdb.set_trace()
-    try:    
-        instance = UserSocialAuth.objects.get(user=request.user, provider='facebook')
-    except UserSocialAuth.DoesNotExist:    
-        pass
-    else:
-        token = instance.tokens['access_token']
-        graph = OpenFacebook(token)
-    current_user.get_profile()
     return render(request, 'edit_user.html',{'form':form})
 
 def offers(request):
@@ -358,68 +344,14 @@ def search(request):
             return render(request, "search.html", context)
     else: 
         return redirect('store_home')
-
-def load_sidebar_cart(request):
-    context = {}      
-    current_user = check_user(request)
-    if hasattr(current_user, 'cart_set') and current_user.cart_set.count()>0:
-        if current_user.cart_set.last().status == CART_STATUS_CHOICES.ACTIVE:
-            cart = current_user.cart_set.last()    
-            context['price'] = cart.cart_amount() 
-            context['cart'] = cart 
-    return context
-
-def load_sidebar_search(request):     
-    form = SearchForm() 
-    promoform = DiscountCodeForm()
-    context = {'form' : form} 
-    return context
-
-def get_user(request):
-    current_user = check_user(request)
-    if not current_user:
-        current_user = User(username=request.session['user_id'][0:15], 
-                            first_name='Anonymous', 
-                            last_name=request.session['user_id'][15:])
-        current_user.set_unusable_password()
-        current_user.save()
-    return current_user 
-
-def check_user(request):
-    if request.user.is_authenticated():
-        current_user = request.user
-    else:
-        try:
-            current_user = (User.objects.filter(username=request.session['user_id'][0:15], 
-                                                last_name=request.session['user_id'][15:])
-                                       .first())
-        except KeyError:
-           current_user=None 
-    return current_user 
-
-def save_cart(sender, user, request, **kwargs):
-    guest_user = User.objects.filter(username=request.session['user_id'][0:15], 
-                                     last_name=request.session['user_id'][15:]).first()
-    if guest_user:
-        current_user = request.user    
-        if guest_user.cart_set.exists():
-            cart = Cart.from_user(current_user)
-            cart_prod = guest_user.cart_set.first().cart_products_set.all()
-            for prod in cart_prod:
-                cart.check_product_cart(prod.product.id, prod.quantity)
-                product = Product.objects.get(pk = prod.product.id)
-                product.modify_quantity(0 - prod.quantity)
-            guest_user.delete()  
-
-user_logged_in.connect(save_cart)  
-
-def show_me_the_money(sender, **kwargs):
-    ipn_obj = sender
-    if (ipn_obj.payment_status == "Completed") & (ipn_obj.flag==False):
-        try:
-            cart=Cart.objects.get(pk=ipn_obj.invoice)
-            cart.create_order()
-        except Cart.DoesNotExist:
-            pass           
-
-payment_was_successful.connect(show_me_the_money) 
+    
+def products_categories(request, name, page=1):
+    try:
+        category=Category.objects.get(name=name)
+    except Category.DoesNotExist:
+        messages.add_message(request, messages.INFO, 'Required category was not found')
+        return redirect('store_home')    
+    products = category.products.all()
+    prod = Paginator(products, options.products_per_page)
+    context = { "products" : prod.page(page), "type" : 2, "page_nr" : page, "name": category.name}
+    return render(request, "categories.html", context)

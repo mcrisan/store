@@ -32,47 +32,17 @@ $(document).ready(function(){
 		var stock = $(this).data("qty");
 		var parent = $(this).parents(".product_details").first();
 		var qty = $(parent).find("input").val();
-		if (qty ==""){
-			var div = $("body").find(".error").first().text("Enter a valid quantity").show().delay(3000).fadeOut();
-			return;
+		data = validate_data(qty, stock);
+		console.log(data);
+		if (data){
+			console.log("dar");
+			add_to_cart(qty, prod_id);
 		}
-		if (qty < 0){
-			var div = $("body").find(".error").first().text("Enter a positive quantity").show().delay(3000).fadeOut();
-			return;
-		}
-		if (qty > stock){
-			var div = $("body").find(".error").first().text("We don't have the required amount").show().delay(3000).fadeOut();
-			return;
-		}
-		
-		console.log(div);
-		$.ajax({
-	        type: "POST",
-	        url: "/store/addtocart/",
-	        data: { qty: qty, prod_id: prod_id} ,
-	        cache: false,
-	        success: function(data) {
-	        	set_data(data['prod_id'], data['quantity'], data['price'], data['total_price'], data['stock']);
-	        	}
-	        });
 		
 	})
+
 	
-	function set_data(prod_id, quant, price, total_price, stock){
-		cart_div =$("body").find(".cart_details");
-		$("body").find("#stock"+ prod_id).text(stock);
-		row = $(cart_div).find('[data-id="'+prod_id+'"]');
-		if (row.length > 0){
-		$(row).find(".quantity").text(quant);
-		$(row).find(".price").text(price);
-		$(cart_div).find('.total').text("Total: " + total_price)
-		}else{
-			window.location.reload(false);
-			
-		}
-	}
-	
-	$(".edit").on("click", function(){
+	$(".cart_container").on("click", ".edit", function(){
 		var prod_id = $(this).data("prod");
 		var stock = parseInt($("body").find("#stock"+ prod_id).text()); //data("qty");
 		var parent = $(this).parents(".quant").first();
@@ -83,36 +53,47 @@ $(document).ready(function(){
 			var elem = $('<p><label for="p_scnts"><input type="text" id="p_scnt" size="5" name="quant" value="" placeholder="Quantity" /></label> <button id="remScnt">OK</button></p>');
 			$(elem).appendTo($(input_qty));
 		}
-		$("button").on("click", function(){
+		$(".cart_container").on("click", "button", function(){
 		var qty = $(parent).find("input").val();
-		if (qty ==""){
-			var div = $("body").find(".error").first().text("Enter a valid quantity").show().delay(3000).fadeOut();
-			return;
+		console.log(qty);
+		data = validate_data(qty, stock);
+		if (data){
+			add_to_cart(qty, prod_id)
 		}
-		if (qty < 0){
-			var div = $("body").find(".error").first().text("Enter a positive quantity").show().delay(3000).fadeOut();
-			return;
-		}
-		if (qty > stock){
-			var div = $("body").find(".error").first().text("We don't have the required amount").show().delay(3000).fadeOut();
-			return;
-		}
-		
-		$.ajax({
-	        type: "POST",
-	        url: "/store/addtocart/",
-	        data: { qty: qty, prod_id: prod_id} ,
-	        cache: false,
-	        success: function(data) {
-	        	console.log(data);
-	        	$(elem).remove();
-	        	set_data(data['prod_id'], data['quantity'], data['price'], data['total_price'], data['stock']);
-	        	}
-	        });
 		
 		});
 		
 
 		
 	})
+	
+	function add_to_cart(qty, prod_id){
+		console.log("bine ma");
+		$.ajax({
+	        type: "POST",
+	        url: "/store/addtocart/",
+	        data: { qty: qty, prod_id: prod_id} ,
+	        cache: false,
+	        success: function(data) {
+	        	$(".cart_container").html(data);
+	        	}
+	        });
+		
+	}
+	
+	function validate_data(qty, stock){
+		if (qty ==""){
+			var div = $("body").find(".error").first().text("Enter a valid quantity").show().delay(3000).fadeOut();
+			return false;
+		}
+		if (qty < 0){
+			var div = $("body").find(".error").first().text("Enter a positive quantity").show().delay(3000).fadeOut();
+			return false;
+		}
+		if (qty > stock){
+			var div = $("body").find(".error").first().text("We don't have the required amount").show().delay(3000).fadeOut();
+			return false;
+		}
+		return true
+	}
 });

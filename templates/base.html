@@ -44,8 +44,10 @@
 		        </form>
 				{% if not user.is_authenticated %} 
 					{% include "partials/sidebar/_login.html" %}
-				{% endif %}				
-				{% include "partials/sidebar/_cart.html" with prod=prod %}
+				{% endif %}	
+				<div class="cart_container">			
+					{% include "partials/sidebar/_cart.html" with prod=prod %}
+				</div>
 			{% endblock %}
 		</div>
 	</div> <!-- /container -->	

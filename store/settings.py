@@ -51,7 +51,6 @@ INSTALLED_APPS = (
     'webstore',
     'paypal.standard.ipn',
     'social.apps.django_app.default',
-    'django_facebook',
     'notifications'
 )
 
@@ -168,8 +167,9 @@ TEMPLATE_CONTEXT_PROCESSORS = (
     "django.contrib.messages.context_processors.messages",
     "social.apps.django_app.context_processors.backends",
     "social.apps.django_app.context_processors.login_redirect",
-    "webstore.views.load_sidebar_cart",
-    "webstore.views.load_sidebar_search"
+    "webstore.context_processors.load_sidebar_cart",
+    "webstore.context_processors.load_sidebar_search",
+    "webstore.context_processors.load_categories",
 )
 
 SITE_ID = 1

@@ -18,4 +18,6 @@ urlpatterns = patterns('',
     url(r'^offers', views.offers, name='offers'),
     url(r'^offer_details/(?P<offer_id>\d+)/$', views.offer_details, name='offer_details'),
     url(r'^notification', 'webstore.views.notifications', name='notifications'),
+    url(r'^category/(?P<name>\w+)/$', views.products_categories, name='category'),
+    url(r'^category/(?P<name>\w+)/page(?P<page>[0-9]+)/$', views.products_categories, name='category_pag'),
 )
