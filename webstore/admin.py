@@ -13,7 +13,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.db.models import Count, Sum, Max, Min
 from django.contrib.admin import SimpleListFilter
 
-from .models import Category, Product, Cart, Cart_Products, Rating, Discount, UserMethods, Coupon
+from .models import Category, Product, Cart, Cart_Products, Rating, Discount, ProxyUser, Coupon
 from .choices import CART_STATUS_CHOICES
 
 
@@ -231,8 +231,8 @@ class CartAdmin(admin.ModelAdmin):
     list_filter = ('status', UserFilter, 'cart_products__product' )
  
     
-class UserMethodsAdmin(admin.ModelAdmin):
-    model = UserMethods
+class ProxyUserAdmin(admin.ModelAdmin):
+    model = ProxyUser
     actions = None
     
     def number_of_orders(self,obj):
@@ -240,7 +240,7 @@ class UserMethodsAdmin(admin.ModelAdmin):
     number_of_orders.admin_order_field = 'ordersc'
     
     def queryset(self, request):
-        qs = super(UserMethodsAdmin, self).queryset(request)
+        qs = super(ProxyUserAdmin, self).queryset(request)
         qs = qs.annotate(ordersc=Count('cart__user'))
         qs = qs.annotate(total_amount=Sum('cart__cart_products__price'))
         qs = qs.annotate(nr_prod=Sum('cart__cart_products__quantity'))
@@ -283,7 +283,7 @@ class UserMethodsAdmin(admin.ModelAdmin):
         return False
     
     def __init__(self, *args, **kwargs):
-        super(UserMethodsAdmin, self).__init__(*args, **kwargs)
+        super(ProxyUserAdmin, self).__init__(*args, **kwargs)
         self.list_display_links = (None, ) 
 
     #readonly_fields = ('money_spent', 'products_ordered', 'latest_order', 'first_order')
@@ -294,7 +294,7 @@ class UserMethodsAdmin(admin.ModelAdmin):
   
     
 class CustomUserAdmin(UserAdmin):
-    model = UserMethods
+    model = ProxyUser
     
     def view_link(self,obj):
       url = reverse('user_data', kwargs={'user_id': obj.id})
@@ -303,7 +303,7 @@ class CustomUserAdmin(UserAdmin):
     view_link.allow_tags = True
     
     def get_admin_url(self,obj):
-        url = reverse("admin:webstore_usermethods_changelist")
+        url = reverse("admin:webstore_proxyuser_changelist")
         return u"<a href='{0}'>View</a>".format(url)
     get_admin_url.short_description = 'View Details'
     get_admin_url.allow_tags = True
@@ -348,7 +348,7 @@ class CouponAdmin(PromotionAdmin):
 
 admin.site.unregister(User)
 admin.site.register(User, CustomUserAdmin)
-admin.site.register(UserMethods, UserMethodsAdmin)
+admin.site.register(ProxyUser, ProxyUserAdmin)
 admin.site.register(Category, CategoryAdmin)
 admin.site.register(Product, ProductAdmin)
 admin.site.register(Cart, CartAdmin)

@@ -66,7 +66,7 @@ MIDDLEWARE_CLASSES = (
 AUTHENTICATION_BACKENDS = (
     'social.backends.facebook.Facebook2OAuth2',
     'social.backends.twitter.TwitterOAuth',
-    'django.contrib.auth.backends.ModelBackend',
+    'webstore.authentication_backend.ProxyUserBackend',
 )
 
 AUTH_PROFILE_MODULE = 'webstore.UserProfile'

@@ -23,7 +23,7 @@ from notifications import notify
 
 from .forms import (RegisterForm, CartForm, RatingForm, ProductRatingsForm , 
                    DeliveryDetailsForm, UserEditForm, SearchForm, DiscountCodeForm)
-from .models import (Cart, Product, Rating, DeliveryDetails, Discount, UserMethods, options,
+from .models import (Cart, Product, Rating, DeliveryDetails, Discount, ProxyUser, options,
                      Category)
 from .tasks import send_order_email
 from .choices import DISCOUNT_STATUS_CHOICES, CART_STATUS_CHOICES
@@ -52,12 +52,10 @@ def sort_by_name(request, type, page=1):
 
 def sort_by_popularity(request, type, page=1):
     if type == 'ASC':
-        products = (Product.objects.annotate(num_orders=Count('cart_products'))
-                                  .order_by('num_orders').all())
+        products = Product.objects.number_of_orders().order_by('num_orders')
         new_type = 'DESC'
     else:
-        products = (Product.objects.annotate(num_orders=Count('cart_products'))
-                                  .order_by('-num_orders').all())
+        products = Product.objects.number_of_orders().order_by('-num_orders')
         new_type = 'ASC' 
     prod = Paginator(products, options.products_per_page)  
     context = { 'products' : prod.page(page),
@@ -69,7 +67,9 @@ def sort_by_popularity(request, type, page=1):
 def comment_form(request):
     error = request.GET.get('error', None)
     requestDict = {'error': error}
-    return render_to_response('comments.html', requestDict, context_instance=RequestContext(request))
+    return render_to_response('comments.html', 
+                              requestDict, 
+                              context_instance=RequestContext(request))
 
 def post_comment(request):
     if request.method == 'POST':
@@ -112,9 +112,8 @@ def rate_product(request):
     if form.is_valid():
         data=request.POST
         current_user = request.user
-        if current_user.cart_set.filter(products__id=data['prod_id'], status='1').exists():
+        if current_user.has_ordered_product(data['prod_id']):
             rate = Rating.create_rate(current_user, data['prod_id'], data['rating'])
-            rate.save()
         avg_rate = Rating.from_product(data['prod_id'])
         context ={"rate": avg_rate} 
     else:
@@ -131,9 +130,7 @@ def product_rating(request):
             rate = prod.product_rating()
             current_user = request.user
             try:
-                enable = (current_user.cart_set.filter(products__id=prod_id, 
-                                                       status=CART_STATUS_CHOICES.ORDERED)
-                                              .exists())
+                enable = current_user.has_ordered_product(prod_id)
             except AttributeError:
                 enable = False    
             context = {"rate": rate,
@@ -202,7 +199,7 @@ def delivery_details(request):
 def review_order(request):
     form = DiscountCodeForm() 
     current_user = request.user
-    cart = current_user.cart_set.filter(status=CART_STATUS_CHOICES.ACTIVE).first()
+    cart = current_user.active_cart()
     if not cart:
         return redirect('store_home')
     if request.method == 'POST':      
@@ -216,7 +213,9 @@ def review_order(request):
                     action_object=cart, 
                     description=u'We have updated your cart with the wanted product', 
                 )
-                messages.add_message(request, messages.INFO, 'Your coupon has been applied to products in promotion')
+                messages.add_message(request, 
+                                     messages.INFO, 
+                                     'Your coupon has been applied to products in promotion')
             else:
                 messages.add_message(request, messages.INFO, 'Your coupon is not valid')    
     return_url = reverse("success")
@@ -228,8 +227,6 @@ def review_order(request):
         "invoice": cart.id,
         "quantity": 1,
         #"notify_url": "http://127.0.0.1:8000" + reverse('paypal-ipn'),
-        #"return_url": "http://localhost:8000" + return_url,
-        #"cancel_return": "http://localhost:8000" + cancel_url,
         "notify_url": "http://5f1a21b4.ngrok.com" + reverse('paypal-ipn'), 
         "return_url": "http://localhost:8000" + return_url,
         "cancel_return": "http://localhost:8000" + cancel_url,
@@ -269,7 +266,7 @@ def payment_canceled(request):
 @login_required
 def checkout(request):
     current_user = request.user
-    cart = current_user.cart_set.filter(status=CART_STATUS_CHOICES.ACTIVE).first()
+    cart = current_user.active_cart()
     if cart:
         cart.create_order() 
         messages.add_message(request, messages.INFO, 'Your order was created')
@@ -282,11 +279,11 @@ def checkout(request):
 
 def delete_prod(request, prod_id):
     current_user = get_user(request)
-    cart =Cart.objects.filter(user=current_user, status=CART_STATUS_CHOICES.ACTIVE).first()
+    cart = current_user.active_cart()
     if cart:
-        prod = cart.cart_products_set.filter(product__id=prod_id).first()
+        prod = cart.get_product(prod_id)
         if prod:
-            product = Product.objects.get(pk = prod_id)
+            product =prod.product
             product.modify_quantity(0 - prod.quantity)
             prod.remove_coupon()
             prod.delete()
@@ -296,17 +293,14 @@ def delete_prod(request, prod_id):
 @login_required
 def user_orders(request):
     current_user = request.user
-    cart =Cart.objects.filter(user=current_user, status=CART_STATUS_CHOICES.ORDERED).all()                         
+    cart =current_user.orders()
     return render(request, "user_orders.html", {'cart': cart})
 
 @login_required
 def order_details(request, cart_id):
     current_user = request.user
     try:
-        order = (Cart.objects.filter(id=cart_id, 
-                                        user=request.user, 
-                                        status=CART_STATUS_CHOICES.ORDERED)
-                              .first())
+        order =current_user.order(cart_id)
     except AttributeError:
         messages.add_message(request, messages.INFO, 'We could not find the required order')
         return redirect('store_home')                               
@@ -324,7 +318,7 @@ def edit_account(request):
     return render(request, 'edit_user.html',{'form':form})
 
 def offers(request):
-    offers =Discount.objects.filter(status=CART_STATUS_CHOICES.ACTIVE)
+    offers =Discount.objects.active_discounts()
     return render(request, "offers.html", {'offers':offers})
 
 def offer_details(request, offer_id):
@@ -339,7 +333,7 @@ def search(request):
     if request.method == 'POST':       
         form = SearchForm(data=request.POST)
         if form.is_valid():
-            products = Product.objects.filter(name__icontains=form.data['query'])
+            products = Product.objects.search(form.data['query'])
             context = { "products" : products, "query" : form.data['query']}
             return render(request, "search.html", context)
     else: 
@@ -353,5 +347,8 @@ def products_categories(request, name, page=1):
         return redirect('store_home')    
     products = category.products.all()
     prod = Paginator(products, options.products_per_page)
-    context = { "products" : prod.page(page), "type" : 2, "page_nr" : page, "name": category.name}
+    context = { "products" : prod.page(page), 
+               "type" : 2, 
+               "page_nr" : page, 
+               "name": category.name}
     return render(request, "categories.html", context)

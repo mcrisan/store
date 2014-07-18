@@ -18,11 +18,16 @@ from .choices import DISCOUNT_STATUS_CHOICES, CART_STATUS_CHOICES, USER_GENDER_C
 options = SiteSettings('Site Settings')
 
 
-class UserMethods(User):
+class ProxyUser(User):
     
     def orders(self):
         orders = self.cart_set.filter(status=CART_STATUS_CHOICES.ORDERED).all()
         return orders
+    
+    def order(self, order_id):
+        order = self.cart_set.filter(id=order_id, 
+                                    status=CART_STATUS_CHOICES.ORDERED).first()
+        return order
     
     def money_spent(self):
         money_spent = (self.cart_set.filter(status=CART_STATUS_CHOICES.ORDERED)
@@ -63,7 +68,13 @@ class UserMethods(User):
     def offers_claimed(self):
         offers = (Promotion.objects.filter(cart_products__cart__user=self).
                                    annotate(Count('id'))).count()
-        return offers                   
+        return offers  
+    
+    def has_ordered_product(self, prod_id):
+        return self.cart_set.filter(products__id=prod_id, status='1').exists() 
+    
+    def active_cart(self):
+        return self.cart_set.filter(status=CART_STATUS_CHOICES.ACTIVE).first()                
 
     class Meta:
         proxy=True
@@ -103,6 +114,15 @@ class Category(models.Model):
     
     def __unicode__(self):  
         return self.name
+
+
+class ProductManager(models.Manager):
+    
+    def number_of_orders(self):
+        return self.annotate(num_orders=Count('cart_products'))
+    
+    def search(self, query):
+        return self.filter(name__icontains=query)
        
         
 class Product(models.Model):
@@ -111,6 +131,8 @@ class Product(models.Model):
     price = models.FloatField("Price",)
     category = models.ForeignKey(Category, related_name ='products')
     image_url = models.URLField("Image URL")
+    
+    objects = ProductManager()
 
     def __unicode__(self):
         return self.name
@@ -138,7 +160,8 @@ class Product(models.Model):
             return 0.0
         
     def discount(self):
-        discount =(self.promotion_set.filter(discount__isnull=False, status=DISCOUNT_STATUS_CHOICES.ACTIVE).
+        discount =(self.promotion_set.filter(discount__isnull=False, 
+                                             status=DISCOUNT_STATUS_CHOICES.ACTIVE).
                                 order_by('-percent').
                                 first())
         if discount:
@@ -164,7 +187,9 @@ class Product(models.Model):
         return price
         
     def has_coupon(self,code):
-        promotion = self.promotion_set.filter(coupon__isnull=False, coupon__code=code, status=DISCOUNT_STATUS_CHOICES.ACTIVE).first()
+        promotion = self.promotion_set.filter(coupon__isnull=False, 
+                                              coupon__code=code, 
+                                              status=DISCOUNT_STATUS_CHOICES.ACTIVE).first()
         if promotion:
             return promotion.coupon
         
@@ -220,8 +245,15 @@ class Promotion(models.Model):
         return price
 
 
+class DiscountManager(models.Manager):
+    
+    def active_discounts(self):
+        return self.filter(status=CART_STATUS_CHOICES.ACTIVE)
+
+
 class Discount(Promotion):
-    end_date = models.DateField(default=datetime.datetime.now(), null=True, blank=True) 
+    end_date = models.DateField(default=datetime.datetime.now(), null=True, blank=True)   
+    objects = DiscountManager() 
 
  
 class Coupon(Promotion):
@@ -249,6 +281,7 @@ class Rating(models.Model):
         else:    
             product = Product.objects.get(pk=prod_id)
             rate = Rating(user=user, product=product, value=value) 
+        rate.save()    
         return rate   
     
     @staticmethod 
@@ -259,20 +292,17 @@ class Rating(models.Model):
 
 class CartManager(models.Manager):
     
-    @staticmethod
-    def orders_total_price():
-        total_price = (Cart.objects.filter(status=CART_STATUS_CHOICES.ORDERED)
+    def orders_total_price(self):
+        total_price = (self.filter(status=CART_STATUS_CHOICES.ORDERED)
                                    .aggregate(total=Sum('cart_products__price')))
         return total_price['total']
     
-    @staticmethod
-    def total_orders():
-        total_orders = Cart.objects.filter(status=CART_STATUS_CHOICES.ORDERED).count()
+    def total_orders(self):
+        total_orders = self.filter(status=CART_STATUS_CHOICES.ORDERED).count()
         return total_orders
     
-    @staticmethod
-    def total_products_ordered():
-        total_orders = (Cart.objects.filter(status=CART_STATUS_CHOICES.ORDERED)
+    def total_products_ordered(self):
+        total_orders = (self.filter(status=CART_STATUS_CHOICES.ORDERED)
                            .aggregate(total=Sum('cart_products__quantity')))
         return total_orders['total']
       
@@ -359,6 +389,9 @@ class Cart(models.Model):
                 ['quant'])
 
         return price   
+    
+    def get_product(self, prod_id):
+       return self.cart_products_set.filter(product__id=prod_id).first()
     
     def money_saved(self): 
         price =self.real_value() - self.cart_amount()

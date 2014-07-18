@@ -39,7 +39,8 @@ class DiscountCodeForm(Form):
  
     def clean_code(self):
         code = self.cleaned_data['code']
-        if not Coupon.objects.filter(code__exact=code, status=DISCOUNT_STATUS_CHOICES.ACTIVE).exists():
+        if not Coupon.objects.filter(code__exact=code, 
+                                     status=DISCOUNT_STATUS_CHOICES.ACTIVE).exists():
             raise ValidationError("Code is not valid")
         return code 
         
