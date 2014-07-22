@@ -24,7 +24,7 @@ from notifications import notify
 from .forms import (RegisterForm, CartForm, RatingForm, ProductRatingsForm , 
                    DeliveryDetailsForm, UserEditForm, SearchForm, DiscountCodeForm)
 from .models import (Cart, Product, Rating, DeliveryDetails, Discount, ProxyUser, options,
-                     Category)
+                     Category, WishList)
 from .tasks import send_order_email
 from .choices import DISCOUNT_STATUS_CHOICES, CART_STATUS_CHOICES
 from django.conf import settings
@@ -129,13 +129,15 @@ def product_rating(request):
             prod = Product.objects.get(pk=prod_id)
             rate = prod.product_rating()
             current_user = request.user
+            wish = prod.is_on_wishlist(request.user)
             try:
                 enable = current_user.has_ordered_product(prod_id)
             except AttributeError:
                 enable = False    
             context = {"rate": rate,
                       "readonly" : not(enable),
-                      "prod_id" : prod_id} 
+                      "prod_id" : prod_id,
+                      "wish" : wish} 
             ratings.append(context)     
     return HttpResponse(json.dumps(ratings), content_type="application/json")
 
@@ -353,26 +355,43 @@ def products_categories(request, name, page=1):
                "name": category.name}
     return render(request, "categories.html", context)
 
+@csrf_exempt
 def add_to_wishlist(request, prod_id):
     current_user = request.user
+    wishlist = WishList.from_user(current_user)
+    data=[]
     try:
         product = Product.objects.get(pk=prod_id)
-        message = product.add_to_wishlist(current_user)
-        messages.add_message(request, messages.INFO, message)
+        message = wishlist.add_to_wishlist(product)
+        context = {'href' : reverse('webstore:remove_from_wishlist', kwargs={'prod_id':prod_id} ),
+                   'text' : "Remove from wishlist!",
+                   'message' : message,
+                   }
+        data.append(context)
     except Product.DoesNotExist:
         messages.add_message(request, messages.INFO, 'Product does not exist')
-    return redirect('store_home') 
+    return HttpResponse(json.dumps(context), content_type="application/json")
 
+@csrf_exempt
 def remove_from_wishlist(request, prod_id):
     current_user = request.user
+    wishlist = WishList.from_user(current_user)
+    data=[]
     try:
         product = Product.objects.get(pk=prod_id)
-        message = product.remove_from_wishlist(current_user)
-        messages.add_message(request, messages.INFO, message)
+        message = wishlist.remove_from_wishlist(product)
+        context = {'href': reverse('webstore:add_to_wishlist', kwargs={'prod_id':prod_id}),
+                   'text': "Add to wishlist!",
+                   'message' : message,
+                }
+        data.append(context)
     except Product.DoesNotExist:
         messages.add_message(request, messages.INFO, 'Product does not exist')
-    return redirect('store_home') 
+    return HttpResponse(json.dumps(context), content_type="application/json") 
 
-def check_wishlist(request):
-    products = Product.objects.order_by('name').all()
+def wishlist_products(request, page=1): 
+    products = request.user.wishlist.products.all()
+    prod = Paginator(products, options.products_per_page)
+    context = { "products" : prod.page(page), "type" : 2, "page_nr" : page}
+    return render(request, "wish_list.html", context)
     

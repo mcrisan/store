@@ -3,15 +3,17 @@ from __future__ import absolute_import
 import datetime
 
 from datetime import timedelta
-from django.db.models import Max
+from django.db.models import Max, Count
 from celery import shared_task
 from django.core.mail import send_mail
 from django.core.mail import EmailMultiAlternatives
 from django.template.loader import get_template
 from django.template import Context
+from django.contrib.contenttypes.models import ContentType
+from notifications import notify
 
 from store.settings import EMAIL_HOST_USER
-from .models import Cart, Product, User, Discount, Promotion, options as opt
+from .models import Cart, Product, User, Discount, Promotion, WishList, options as opt
 from .choices import DISCOUNT_STATUS_CHOICES, CART_STATUS_CHOICES
 
 
@@ -101,5 +103,22 @@ def stop_promotions():
         except Discount.DoesNotExist: 
             if promotion.coupon.volume == 0:
                 promotion.coupon.status=DISCOUNT_STATUS_CHOICES.FINISHED 
-                promotion.coupon.save()                    
+                promotion.coupon.save()    
+
+@shared_task                
+def wishlist_notification():
+    print "wishlist"
+    date=datetime.datetime.now()-timedelta(days=-1)
+    ctype = ContentType.objects.get(app_label="webstore", model="wishlist")
+    wishlists = (WishList.objects.filter(products__quantity__lt=25, 
+                                        user__notifications__timestamp__lt=date, 
+                                        user__notifications__action_object_content_type=ctype).
+                                  annotate(us=Count('user'))) 
+    for wishlist in wishlists:
+        notify.send(wishlist,
+                    recipient=wishlist.user,
+                    verb=u'Some products from wishlist are almost out of stock',
+                    action_object=wishlist, 
+                    description=u'We have updated your cart with the wanted product', 
+                )                                
         

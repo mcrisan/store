@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% load staticfiles %}
+{% load cache %}
+
+{% block styling %}
+	{{ block.super }}
+	<link rel="stylesheet" href="{% static 'rating/jquery.raty.css' %}"> 
+{% endblock styling %}
+
+{% block content %}
+<h3>Products from your wishlist</h3>
+<div class="col-md-5">Sort by: 
+	<a href="{% url 'sort_by_name' type=type %}">name</a> | 
+	<a href="{% url 'sort_by_popularity' type=type %}">popularity</a>
+	{% if type == 1 %}
+		<span>Ascending</span>
+	{% elif type == 0 %}
+		<span>Descending</span>
+	{% endif %}		
+</div>
+<div class="error col-md-12"></div>
+{% cache 60 wish_list_products page_nr user.id user.wishlist.products.count %}
+<div class="row">
+	 {% for prod in products.object_list %}
+	    {% include "home_product.html" with product=prod %}
+	 {% endfor %}
+</div>
+{% endcache %}
+{% include "partials/_pagination.html" with address='wishlist_products_pag' page=products page_nr=page_nr %}
+{% endblock content %}
+
+{% block myscript %}
+	<script src="{% static 'script/cart.js' %}"></script>
+	<script src="{% static 'rating/jquery.raty.js' %}"></script>
+	<script src="{% static 'rating/home_rating.js' %}"></script>
+{% endblock myscript %}

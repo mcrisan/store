@@ -17,6 +17,25 @@ $.ajax({
     	$.each( data, function( key, data ) {
     		  $('#'+data['prod_id']).data( "rate", data['readonly'] );
     		  rating(data['rate'], data['readonly'], data['prod_id']);
+    		  if (data['wish']==true){
+	    		  elem = $('<a/>', {
+	    			    href: "#",
+	    			    'data-href': 'http://localhost:8000/store/remove_wishlist/' + data['prod_id'] + '/',
+	    			    'data-wishlist': data['prod_id'],
+	    			    text: 'Remove from wishlist!',
+	    			   'class': "wishlist_button btn-info"
+	    			})
+    		  }else{
+        		 elem = $('<a/>', {
+      			      //href: 'store/add_wishlist/' + data['prod_id'],
+        			  href: "#",
+      			     'data-href': 'store/add_wishlist/' + data['prod_id'] + '/',
+    			     'data-wishlist': data['prod_id'],
+      			      text: 'Add to wishlist!',
+      			     'class': "wishlist_button btn-info"
+      			  }) 
+    		  }
+        	  $(elem).appendTo($("[data-wishlist='" + data['prod_id'] + "']"));
     		});
     	rating(data['rate'], data['readonly']);
     }

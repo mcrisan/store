@@ -35,7 +35,6 @@ $(document).ready(function(){
 		data = validate_data(qty, stock);
 		console.log(data);
 		if (data){
-			console.log("dar");
 			add_to_cart(qty, prod_id);
 		}
 		
@@ -49,7 +48,6 @@ $(document).ready(function(){
 		var input_field = $(parent).find("input")
 		if (input_field.length == 0){
 			var input_qty = $(parent).find(".input_qty")		
-			console.log("input is" + input_qty)
 			var elem = $('<p><label for="p_scnts"><input type="text" id="p_scnt" size="5" name="quant" value="" placeholder="Quantity" /></label> <button id="remScnt">OK</button></p>');
 			$(elem).appendTo($(input_qty));
 		}

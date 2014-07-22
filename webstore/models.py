@@ -77,7 +77,7 @@ class ProxyUser(User):
     
     def active_cart(self):
         return self.cart_set.filter(status=CART_STATUS_CHOICES.ACTIVE).first() 
-               
+                 
 
     class Meta:
         proxy=True
@@ -141,8 +141,9 @@ class Product(models.Model):
         return self.name
         
     def modify_quantity(self, quantity): 
-        self.quantity=self.quantity - quantity   
-        self.save()
+        if (self.quantity >= abs(quantity)):
+            self.quantity=self.quantity - quantity   
+            self.save()
         
     def total_orders(self):
         orders = self.cart_products_set.count()
@@ -195,30 +196,12 @@ class Product(models.Model):
                                               status=DISCOUNT_STATUS_CHOICES.ACTIVE).first()
         if promotion:
             return promotion.coupon
-        
-    def add_to_wishlist(self, user):
-        if not self.wishlist_set.filter(user=user).first():  
-            self.wishlist_set.create(user=user, product=self) 
-            message ="Product was added" 
-            #cache_key = template_cache_key('homepage_products', 1)
-            #ipdb.set_trace()
-            #cache.delete(cache_key)
-        else:
-            message ="Product is already on your wishlist"
-        return message 
-    
-    def remove_from_wishlist(self, user):
-        prod = self.wishlist_set.filter(user=user).first()
-        if prod:  
-            prod.delete()
-            message ="Product was removed"
-        else:
-            message ="Product was not found on your wishlist"
-        return message
     
     def is_on_wishlist(self, user):
         if self.wishlist_set.filter(user=user).first():  
-            return True     
+            return True 
+        else:
+            return False    
         
 
 class ProductModerator(CommentModerator):
@@ -492,10 +475,39 @@ class DeliveryDetails(models.Model):
     
     
 class WishList(models.Model):
-    user = models.ForeignKey(User)
-    product = models.ForeignKey(Product)
+    user = models.OneToOneField(User, primary_key=True)
+    products = models.ManyToManyField(Product)
     date_created = models.DateField(default=datetime.datetime.now())
 
     def __unicode__(self):
-        return self.user.name
+        return self.user.username
+    
+    @classmethod
+    def from_user(cls,user):
+        try:
+            wishlist = cls.objects.get(user=user)
+        except cls.DoesNotExist:
+            wishlist = cls(user=user)
+        return wishlist
+    
+    def add_to_wishlist(self, product):
+        if not self.products.filter(id=product.id).first():  
+            self.products.add(product) 
+            message ="Product was added" 
+        else:
+            message ="Product is already on your wishlist"
+        return message 
+    
+    def remove_from_wishlist(self, product):
+        prod = self.products.filter(id=product.id).first()
+        if prod:  
+            self.products.remove(product)
+            message ="Product was removed"
+        else:
+            message ="Product was not found on your wishlist"
+        return message
+    
+    def get_absolute_url(self):
+        from django.core.urlresolvers import reverse
+        return reverse('webstore:wishlist_products')
          
