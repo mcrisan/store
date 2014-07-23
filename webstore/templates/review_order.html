@@ -29,15 +29,16 @@
 	 {% empty %}
 	 	<div class="row">Your cart is empty</div>
 	 {% endfor %}
+{% endcache %}	
 	 {% if cart %}
 	 </br>
 	 	{% if cart.money_saved  %}
 		 <div class="total col-md-6 ">Total discount: {{cart.total_discount|floatformat:-2}}% | You saved: {{cart.money_saved|floatformat:-2}}</div>
 		 {% endif %}
 		 <div class="total col-md-offset-10">Total: {{cart.cart_amount|floatformat:-2}}</div> 
-		 <br/>
+		 <br/>	 
 		 <div>
-		 	<form role="form" class="form-horizontal" method="post" action="{% url 'webstore:review_order' %}">
+		 	<form role="form" class="form-horizontal" method="post" action="{% url 'webstore:apply_coupon' %}">
 		    {% csrf_token %}
 		    <!-- Text input-->
 			<div class="form-group left">
@@ -47,6 +48,9 @@
 			    <span class="help-inline">{{ form.code.errors }}</span>
 			  </div>
 			  <input class="btn-info col-md-1" type="submit" value="Apply" />
+			  {% if cart.has_coupon %}
+			  	<a href="{% url 'webstore:remove_coupon' %}">Remove Coupon {{cart.has_coupon.name }}</a>
+			  {% endif %}
 			</div>
 		   
 	      </form>
@@ -57,6 +61,6 @@
 		 {{ pform.sandbox }}
 	 {% endif %}
  </div>	
- {% endcache %}   
+   
     
 {% endblock content %}

@@ -52,17 +52,7 @@ def send_order_email(to_user):
     msg = EmailMultiAlternatives(subject, text_content, EMAIL_HOST_USER, [to_user.email])
     msg.attach_alternative(html_content, "text/html")
     msg.send()
-    
-@shared_task
-def start_promotions1():
-    print "start discounts"
-    date=datetime.datetime.now().date()
-    discounts = (Discount.objects.filter(start_date__lte=date, end_date__gte=date)
-                                .exclude(status=DISCOUNT_STATUS_CHOICES.ACTIVE).all())
-    for discount in discounts:
-        discount.status=DISCOUNT_STATUS_CHOICES.ACTIVE 
-        discount.save()  
-        
+           
 @shared_task
 def start_promotions():
     print "start discounts"
@@ -77,18 +67,7 @@ def start_promotions():
         except Discount.DoesNotExist: 
             if promotion.coupon.volume > 0:
                 promotion.status=DISCOUNT_STATUS_CHOICES.ACTIVE 
-                promotion.save()        
-        
-@shared_task
-def stop_promotions1():
-    print "stop discounts"
-    date=datetime.datetime.now().date()
-    discounts = Discount.objects.filter(end_date__lt=date, 
-                                        status=DISCOUNT_STATUS_CHOICES.ACTIVE).all()
-    for discount in discounts:
-        if discount.end_date is not None:
-            discount.status=DISCOUNT_STATUS_CHOICES.FINISHED 
-            discount.save()    
+                promotion.save()           
             
 @shared_task
 def stop_promotions():

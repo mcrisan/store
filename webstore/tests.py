@@ -24,7 +24,6 @@ class ProductTestCase(TestCase):
                             discount = discount)
 
     def test_modify_quantity(self):
-        """Animals that can speak are correctly identified"""
         prod = Product.objects.get(name="lion")
         old_quantity = prod.quantity
         prod.modify_quantity(2)
@@ -32,7 +31,6 @@ class ProductTestCase(TestCase):
         self.assertEqual(new_quantity, old_quantity - 2)
         
     def test_modify_quantity_to_big(self):
-        """Animals that can speak are correctly identified"""
         prod = Product.objects.get(name="lion")
         old_quantity = prod.quantity
         prod.modify_quantity(old_quantity + 3)
@@ -40,7 +38,6 @@ class ProductTestCase(TestCase):
         self.assertEqual(new_quantity, old_quantity)  
         
     def test_modify_quantity_to_small(self):
-        """Animals that can speak are correctly identified"""
         prod = Product.objects.get(name="lion")
         old_quantity = prod.quantity
         prod.modify_quantity(-abs(old_quantity) - 3)
@@ -66,4 +63,25 @@ class ProductTestCase(TestCase):
         prod = Product.objects.get(name="fox")
         rate = prod.product_rating()
         self.assertEqual(rate, 0)
+        
+    def test_product_discount(self):
+        prod = Product.objects.get(name="fox")
+        discount = prod.discount()
+        self.assertEqual(discount.percent, 20)
+        
+    def test_product_revenue(self):
+        prod = Product.objects.get(name="lion")
+        revenue = prod.revenue()
+        self.assertEqual(revenue, 20)
+        
+    def test_discounted_price(self):
+        prod = Product.objects.get(name="lion")
+        price = prod.discounted_price()
+        self.assertEqual(price, 4)
+        
+    def test_is_on_wishlist(self):
+        prod = Product.objects.get(name="lion")
+        user = User.objects.get(username="marius")
+        wishlist = prod.is_on_wishlist(user)
+        self.assertEqual(wishlist, False)
         

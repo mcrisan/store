@@ -79,7 +79,7 @@ class Cart_ProductsInline(admin.TabularInline):
     
     
 class UserFilter(SimpleListFilter):
-    title = 'latest user' # or use _('country') for translated title
+    title = 'latest user' 
     parameter_name = 'user'
 
     def lookups(self, request, model_admin):
@@ -285,12 +285,6 @@ class ProxyUserAdmin(admin.ModelAdmin):
     def __init__(self, *args, **kwargs):
         super(ProxyUserAdmin, self).__init__(*args, **kwargs)
         self.list_display_links = (None, ) 
-
-    #readonly_fields = ('money_spent', 'products_ordered', 'latest_order', 'first_order')
-    #readonly_fields = User._meta.get_all_field_names()
-    
-#    def has_change_permission(self, request, obj=None):
-#        return False
   
     
 class CustomUserAdmin(UserAdmin):

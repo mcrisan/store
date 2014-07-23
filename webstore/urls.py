@@ -24,4 +24,6 @@ urlpatterns = patterns('',
     url(r'^remove_wishlist/(?P<prod_id>\d+)/$', views.remove_from_wishlist, name='remove_from_wishlist'),
     url(r'^wishlist_products/$', views.wishlist_products, name='wishlist_products'),
     url(r'^wishlist_products/page(?P<page>[0-9]+)/$', views.wishlist_products, name='wishlist_products_pag'),
+    url(r'^remove_coupon', views.remove_coupon, name='remove_coupon'),
+    url(r'^apply_coupon', views.apply_coupon, name='apply_coupon'),
 )

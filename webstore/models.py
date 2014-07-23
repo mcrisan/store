@@ -15,7 +15,6 @@ from django.core.cache import cache
 
 from store.site_settings import SiteSettings
 from .choices import DISCOUNT_STATUS_CHOICES, CART_STATUS_CHOICES, USER_GENDER_CHOICES
-from .helpers import template_cache_key
 
 options = SiteSettings('Site Settings')
 
@@ -163,7 +162,7 @@ class Product(models.Model):
         else:
             return 0.0
         
-    def discount(self):
+    def discount(self, user=None):
         discount =(self.promotion_set.filter(discount__isnull=False, 
                                              status=DISCOUNT_STATUS_CHOICES.ACTIVE).
                                 order_by('-percent').
@@ -189,6 +188,7 @@ class Product(models.Model):
             discount = 0    
         price = self.price - self.price*discount/100
         return price
+    
         
     def has_coupon(self,code):
         promotion = self.promotion_set.filter(coupon__isnull=False, 
@@ -273,6 +273,10 @@ class Coupon(Promotion):
     def modify_quantity(self, quantity):
         self.volume -= quantity
         self.save()
+        
+class FirstOrderDiscount(Promotion):
+    end_date = models.DateField(default=datetime.datetime.now(), null=True, blank=True)   
+       
    
             
 class Rating(models.Model):
@@ -390,7 +394,11 @@ class Cart(models.Model):
             if prod.save_coupon(code):
                 cart_has_coupon=True
         if cart_has_coupon:
-            return coupon    
+            return coupon 
+        
+    def remove_coupon(self): 
+        for prod in self.cart_products_set.exclude(discount__coupon__isnull=True):
+            prod.remove_coupon()      
                 
     def real_value(self): 
         price =(self.cart_products_set.
@@ -410,6 +418,11 @@ class Cart(models.Model):
     def total_discount(self):
         discount = self.money_saved()/self.real_value()*100
         return discount    
+    
+    def has_coupon(self):
+        prod = self.cart_products_set.filter(discount__coupon__isnull = False).first()
+        if prod:
+            return prod.discount
             
 class Cart_Products(models.Model):
     product = models.ForeignKey(Product)

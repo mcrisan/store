@@ -27,7 +27,6 @@ def user_details(strategy, details, response, user=None, is_new=False, *args, **
             except UserProfile.DoesNotExist:  
                 profile = UserProfile(user=user, birthday=birthday)   
             finally: 
-
                 profile.location = location
                 profile.hometown = hometown
                 profile.locale = locale

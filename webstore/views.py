@@ -203,8 +203,37 @@ def review_order(request):
     current_user = request.user
     cart = current_user.active_cart()
     if not cart:
+        return redirect('store_home')    
+    paypal_dict = {
+        "business": settings.PAYPAL_RECEIVER_EMAIL,
+        "amount": cart.cart_amount(),
+        "item_name": "webstore cart",
+        "invoice": cart.id,
+        "quantity": 1,
+        #"notify_url": "http://127.0.0.1:8000" + reverse('paypal-ipn'),
+        "notify_url": "http://5f1a21b4.ngrok.com" + reverse('paypal-ipn'), 
+        "return_url": "http://localhost:8000" + reverse("success"),
+        "cancel_return": "http://localhost:8000" + reverse("canceled"),
+
+    }
+    pform = PayPalPaymentsForm(initial=paypal_dict)
+    context = {"pform": pform}                 
+    return render(request, "review_order.html", {'cart':cart, 'form':form, "pform": pform}) 
+
+def remove_coupon(request):
+    current_user = request.user
+    cart = current_user.active_cart()
+    if not cart:
         return redirect('store_home')
-    if request.method == 'POST':      
+    else:
+        cart.remove_coupon()
+        messages.add_message(request, messages.INFO, 'Your coupon was removed')
+        return redirect('webstore:review_order')
+    
+def apply_coupon(request):    
+    if request.method == 'POST':
+        current_user = request.user
+        cart = current_user.active_cart()      
         form = DiscountCodeForm(data=request.POST)
         if form.is_valid():
             coupon = cart.apply_discount(form.data['code'])
@@ -219,26 +248,9 @@ def review_order(request):
                                      messages.INFO, 
                                      'Your coupon has been applied to products in promotion')
             else:
-                messages.add_message(request, messages.INFO, 'Your coupon is not valid')    
-    return_url = reverse("success")
-    cancel_url = reverse("canceled")  
-    paypal_dict = {
-        "business": settings.PAYPAL_RECEIVER_EMAIL,
-        "amount": cart.cart_amount(),
-        "item_name": "webstore cart",
-        "invoice": cart.id,
-        "quantity": 1,
-        #"notify_url": "http://127.0.0.1:8000" + reverse('paypal-ipn'),
-        "notify_url": "http://5f1a21b4.ngrok.com" + reverse('paypal-ipn'), 
-        "return_url": "http://localhost:8000" + return_url,
-        "cancel_return": "http://localhost:8000" + cancel_url,
-
-    }
-
-    pform = PayPalPaymentsForm(initial=paypal_dict)
-    context = {"pform": pform}                 
-    return render(request, "review_order.html", {'cart':cart, 'form':form, "pform": pform}) 
-
+                messages.add_message(request, messages.INFO, 'Your coupon is not valid')
+    return redirect('webstore:review_order')
+         
 def payment_success(request):
     txn = request.GET.get('tx', None) 
     try:   
