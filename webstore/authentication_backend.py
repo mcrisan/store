@@ -1,5 +1,6 @@
 from django.contrib.auth.backends import ModelBackend
-
+from social.backends.twitter import TwitterOAuth
+from social.backends.facebook import Facebook2OAuth2
 from .models import ProxyUser
 
 class ProxyUserBackend(ModelBackend):
@@ -18,3 +19,19 @@ class ProxyUserBackend(ModelBackend):
             return ProxyUser.objects.get(pk=user_id)
         except ProxyUser.DoesNotExist:
             return None
+        
+class TwitterBackend(TwitterOAuth):
+       
+    def get_user(self,user_id):
+        try:
+            return ProxyUser.objects.get(pk=user_id)
+        except ProxyUser.DoesNotExist:
+            return None    
+        
+class FacebookBackend(Facebook2OAuth2):
+       
+    def get_user(self,user_id):
+        try:
+            return ProxyUser.objects.get(pk=user_id)
+        except ProxyUser.DoesNotExist:
+            return None       

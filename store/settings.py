@@ -64,8 +64,10 @@ MIDDLEWARE_CLASSES = (
     'store.middlewares.UserMiddleware',
 )
 AUTHENTICATION_BACKENDS = (
-    'social.backends.facebook.Facebook2OAuth2',
-    'social.backends.twitter.TwitterOAuth',
+    #'social.backends.facebook.Facebook2OAuth2',
+    #'social.backends.twitter.TwitterOAuth',
+    'webstore.authentication_backend.FacebookBackend',
+    'webstore.authentication_backend.TwitterBackend',
     'webstore.authentication_backend.ProxyUserBackend',
 )
 
@@ -78,7 +80,7 @@ SOCIAL_AUTH_FACEBOOK_SECRET     = '63a80eb14a82774b7552ad8c26b19bbb'
 SOCIAL_AUTH_TWITTER_KEY         = 'IMRGG9fR76Z1aR6nMCBZz4qOe'
 SOCIAL_AUTH_TWITTER_SECRET      = 'QQUfZiIMatwdSFA0dP3hHDb1XK660Qa72ZCPAh4bYdzU77PSUO'
 
-#SOCIAL_AUTH_USER_MODEL = 'django.contrib.auth.models.User'
+#SOCIAL_AUTH_USER_MODEL = 'webstore.models.ProxyUser'
 
 SOCIAL_AUTH_COMPLETE_URL_NAME  = 'socialauth_complete'
 SOCIAL_AUTH_ASSOCIATE_URL_NAME = 'socialauth_associate_complete'

@@ -333,7 +333,7 @@ class CouponAdmin(PromotionAdmin):
        
     list_display = ('name', 'percent', 'start_date', 'status', 
                     'products_offer', 'quantity_ordered', 'money_spent', 
-                    'real_value', 'products_ordered','volume','code')
+                    'real_value', 'products_ordered','volume','code', 'first_order')
     search_fields = ['name']
     filter_horizontal = ('products',)
     form = DiscountForm

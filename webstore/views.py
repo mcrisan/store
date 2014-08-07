@@ -199,7 +199,13 @@ def delivery_details(request):
 
 @login_required
 def review_order(request):
-    form = DiscountCodeForm() 
+    try:
+        form_data = request.session.get('form_data', None)
+        del request.session['form_data']
+        form = DiscountCodeForm(form_data)
+        form.is_valid()
+    except KeyError:  
+        form = DiscountCodeForm()  
     current_user = request.user
     cart = current_user.active_cart()
     if not cart:
@@ -249,6 +255,8 @@ def apply_coupon(request):
                                      'Your coupon has been applied to products in promotion')
             else:
                 messages.add_message(request, messages.INFO, 'Your coupon is not valid')
+        else:
+            request.session['form_data'] = request.POST        
     return redirect('webstore:review_order')
          
 def payment_success(request):

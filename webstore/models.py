@@ -74,6 +74,9 @@ class ProxyUser(User):
     def has_ordered_product(self, prod_id):
         return self.cart_set.filter(products__id=prod_id, status='1').exists() 
     
+    def has_ordered(self):
+        return self.cart_set.filter(status=CART_STATUS_CHOICES.ORDERED).exists()
+     
     def active_cart(self):
         return self.cart_set.filter(status=CART_STATUS_CHOICES.ACTIVE).first() 
                  
@@ -162,7 +165,7 @@ class Product(models.Model):
         else:
             return 0.0
         
-    def discount(self, user=None):
+    def discount(self):
         discount =(self.promotion_set.filter(discount__isnull=False, 
                                              status=DISCOUNT_STATUS_CHOICES.ACTIVE).
                                 order_by('-percent').
@@ -188,7 +191,6 @@ class Product(models.Model):
             discount = 0    
         price = self.price - self.price*discount/100
         return price
-    
         
     def has_coupon(self,code):
         promotion = self.promotion_set.filter(coupon__isnull=False, 
@@ -269,15 +271,12 @@ class Discount(Promotion):
 class Coupon(Promotion):
     code = models.CharField(max_length=20)
     volume = models.PositiveIntegerField() 
+    first_order = models.BooleanField()
     
     def modify_quantity(self, quantity):
         self.volume -= quantity
         self.save()
-        
-class FirstOrderDiscount(Promotion):
-    end_date = models.DateField(default=datetime.datetime.now(), null=True, blank=True)   
-       
-   
+                   
             
 class Rating(models.Model):
     value = models.IntegerField("Value",)
@@ -382,12 +381,21 @@ class Cart(models.Model):
     
     def create_order(self):
         self.status = CART_STATUS_CHOICES.ORDERED
-        self.save() 
+        self.save()
         
-    def apply_discount(self, code):
+    def check_coupon(self, code):
         coupon = (Coupon.objects.filter(code__exact=code, 
                                         status=DISCOUNT_STATUS_CHOICES.ACTIVE).
-                                 first())
+                                 first()) 
+        if coupon and self.user.has_ordered() ==True and coupon.first_order==True:
+            pass  
+        else:
+            return coupon 
+        
+    def apply_discount(self, code):
+        coupon = self.check_coupon(code)
+        if not coupon:
+            return
         cart_has_coupon=False
         for prod in self.cart_products_set.exclude(discount = coupon):
             prod.remove_coupon()
