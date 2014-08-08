@@ -8,11 +8,16 @@ from django.db import models
 class Migration(SchemaMigration):
 
     def forwards(self, orm):
-        # Deleting field 'WishList.product'
-        db.delete_column(u'webstore_wishlist', 'product_id')
+        # Adding model 'WishList'
+        db.create_table(u'webstore_wishlist', (
+            (u'id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
+            ('user', self.gf('django.db.models.fields.related.OneToOneField')(to=orm['auth.User'], unique=True)),
+            ('date_created', self.gf('django.db.models.fields.DateField')(default=datetime.datetime(2014, 8, 8, 0, 0))),
+        ))
+        db.send_create_signal(u'webstore', ['WishList'])
 
-        # Adding M2M table for field product on 'WishList'
-        m2m_table_name = db.shorten_name(u'webstore_wishlist_product')
+        # Adding M2M table for field products on 'WishList'
+        m2m_table_name = db.shorten_name(u'webstore_wishlist_products')
         db.create_table(m2m_table_name, (
             ('id', models.AutoField(verbose_name='ID', primary_key=True, auto_created=True)),
             ('wishlist', models.ForeignKey(orm[u'webstore.wishlist'], null=False)),
@@ -22,13 +27,11 @@ class Migration(SchemaMigration):
 
 
     def backwards(self, orm):
-        # Adding field 'WishList.product'
-        db.add_column(u'webstore_wishlist', 'product',
-                      self.gf('django.db.models.fields.related.ForeignKey')(default=1, to=orm['webstore.Product']),
-                      keep_default=False)
+        # Deleting model 'WishList'
+        db.delete_table(u'webstore_wishlist')
 
-        # Removing M2M table for field product on 'WishList'
-        db.delete_table(db.shorten_name(u'webstore_wishlist_product'))
+        # Removing M2M table for field products on 'WishList'
+        db.delete_table(db.shorten_name(u'webstore_wishlist_products'))
 
 
     models = {
@@ -93,6 +96,7 @@ class Migration(SchemaMigration):
         u'webstore.coupon': {
             'Meta': {'object_name': 'Coupon', '_ormbases': [u'webstore.Promotion']},
             'code': ('django.db.models.fields.CharField', [], {'max_length': '20'}),
+            'first_order': ('django.db.models.fields.BooleanField', [], {}),
             u'promotion_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': u"orm['webstore.Promotion']", 'unique': 'True', 'primary_key': 'True'}),
             'volume': ('django.db.models.fields.PositiveIntegerField', [], {})
         },
@@ -106,7 +110,7 @@ class Migration(SchemaMigration):
         },
         u'webstore.discount': {
             'Meta': {'object_name': 'Discount', '_ormbases': [u'webstore.Promotion']},
-            'end_date': ('django.db.models.fields.DateField', [], {'default': 'datetime.datetime(2014, 7, 21, 0, 0)', 'null': 'True', 'blank': 'True'}),
+            'end_date': ('django.db.models.fields.DateField', [], {'default': 'datetime.datetime(2014, 8, 8, 0, 0)', 'null': 'True', 'blank': 'True'}),
             u'promotion_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': u"orm['webstore.Promotion']", 'unique': 'True', 'primary_key': 'True'})
         },
         u'webstore.product': {
@@ -125,7 +129,7 @@ class Migration(SchemaMigration):
             'name': ('django.db.models.fields.CharField', [], {'max_length': '100'}),
             'percent': ('django.db.models.fields.FloatField', [], {}),
             'products': ('django.db.models.fields.related.ManyToManyField', [], {'to': u"orm['webstore.Product']", 'symmetrical': 'False'}),
-            'start_date': ('django.db.models.fields.DateField', [], {'default': 'datetime.datetime(2014, 7, 21, 0, 0)'}),
+            'start_date': ('django.db.models.fields.DateField', [], {'default': 'datetime.datetime(2014, 8, 8, 0, 0)'}),
             'status': ('django.db.models.fields.CharField', [], {'default': "'1'", 'max_length': '1'})
         },
         u'webstore.rating': {
@@ -148,10 +152,10 @@ class Migration(SchemaMigration):
         },
         u'webstore.wishlist': {
             'Meta': {'object_name': 'WishList'},
-            'date_created': ('django.db.models.fields.DateField', [], {'default': 'datetime.datetime(2014, 7, 21, 0, 0)'}),
+            'date_created': ('django.db.models.fields.DateField', [], {'default': 'datetime.datetime(2014, 8, 8, 0, 0)'}),
             u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'product': ('django.db.models.fields.related.ManyToManyField', [], {'to': u"orm['webstore.Product']", 'symmetrical': 'False'}),
-            'user': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['auth.User']"})
+            'products': ('django.db.models.fields.related.ManyToManyField', [], {'to': u"orm['webstore.Product']", 'symmetrical': 'False'}),
+            'user': ('django.db.models.fields.related.OneToOneField', [], {'to': u"orm['auth.User']", 'unique': 'True'})
         }
     }
 

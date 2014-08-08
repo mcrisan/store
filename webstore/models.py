@@ -12,6 +12,7 @@ from django.core.validators import MaxLengthValidator
 from mptt.models import MPTTModel, TreeForeignKey
 from django.contrib.comments.moderation import CommentModerator, moderator
 from django.core.cache import cache
+from notifications import notify
 
 from store.site_settings import SiteSettings
 from .choices import DISCOUNT_STATUS_CHOICES, CART_STATUS_CHOICES, USER_GENDER_CHOICES
@@ -493,10 +494,9 @@ class DeliveryDetails(models.Model):
         else:
             details = {'address': "" , 'phonenumber':""} 
         return details     
-    
-    
+
 class WishList(models.Model):
-    user = models.OneToOneField(User, primary_key=True)
+    user = models.OneToOneField(User)
     products = models.ManyToManyField(Product)
     date_created = models.DateField(default=datetime.datetime.now())
 
@@ -509,12 +509,20 @@ class WishList(models.Model):
             wishlist = cls.objects.get(user=user)
         except cls.DoesNotExist:
             wishlist = cls(user=user)
+            wishlist.save()
         return wishlist
     
     def add_to_wishlist(self, product):
+        #ipdb.set_trace()
         if not self.products.filter(id=product.id).first():  
             self.products.add(product) 
-            message ="Product was added" 
+            message ="Product was added"
+            notify.send(self,
+                recipient=self.user,
+                verb=u'Product was added to wishlist',
+                action_object=self, 
+                description=u'', 
+                )   
         else:
             message ="Product is already on your wishlist"
         return message 
@@ -530,5 +538,7 @@ class WishList(models.Model):
     
     def get_absolute_url(self):
         from django.core.urlresolvers import reverse
-        return reverse('webstore:wishlist_products')
+        return reverse('webstore:wishlist_products')   
+    
+
          

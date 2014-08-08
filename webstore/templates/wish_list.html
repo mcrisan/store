@@ -8,16 +8,9 @@
 {% endblock styling %}
 
 {% block content %}
-<h3>Products from your wishlist</h3>
-<div class="col-md-5">Sort by: 
-	<a href="{% url 'sort_by_name' type=type %}">name</a> | 
-	<a href="{% url 'sort_by_popularity' type=type %}">popularity</a>
-	{% if type == 1 %}
-		<span>Ascending</span>
-	{% elif type == 0 %}
-		<span>Descending</span>
-	{% endif %}		
-</div>
+{% if products.object_list %}
+	<h3>Products from your wishlist</h3>
+{% endif %}
 <div class="error col-md-12"></div>
 {% cache 60 wish_list_products page_nr user.id user.wishlist.products.count %}
 <div class="row">

@@ -25,10 +25,9 @@ def removecart():
                         .filter(total__lt=date, status=CART_STATUS_CHOICES.ACTIVE).all())
     for cart in carts:
         for prod in cart.cart_products_set.all():
+            prod.remove_coupon()
             product = Product.objects.get(pk = prod.product.id)
-            product.modify_quantity(0 - prod.quantity)
-        for prod_disc in cart.discountedproducts_set.all():
-            prod_disc.delete()    
+            product.modify_quantity(0 - prod.quantity)   
         cart.delete()
         
 @shared_task
@@ -87,17 +86,16 @@ def stop_promotions():
 @shared_task                
 def wishlist_notification():
     print "wishlist"
-    date=datetime.datetime.now()-timedelta(days=-1)
+    date=datetime.datetime.now()-timedelta(days=7)
     ctype = ContentType.objects.get(app_label="webstore", model="wishlist")
-    wishlists = (WishList.objects.filter(products__quantity__lt=25, 
-                                        user__notifications__timestamp__lt=date, 
-                                        user__notifications__action_object_content_type=ctype).
-                                  annotate(us=Count('user'))) 
+    wishlists = (WishList.objects.filter(user__notifications__action_object_content_type=ctype).
+                             annotate(data=Max('user__notifications__timestamp')).
+                             filter(data__lt=date))
     for wishlist in wishlists:
         notify.send(wishlist,
                     recipient=wishlist.user,
                     verb=u'Some products from wishlist are almost out of stock',
                     action_object=wishlist, 
-                    description=u'We have updated your cart with the wanted product', 
+                    description=u'Act now if you want to buy the product', 
                 )                                
         

@@ -8,28 +8,30 @@ from django.db import models
 class Migration(SchemaMigration):
 
     def forwards(self, orm):
-        # Deleting field 'WishList.id'
-        db.delete_column(u'webstore_wishlist', u'id')
+        # Deleting model 'WishList'
+        db.delete_table(u'webstore_wishlist')
 
-
-        # Changing field 'WishList.user'
-        db.alter_column(u'webstore_wishlist', 'user_id', self.gf('django.db.models.fields.related.OneToOneField')(to=orm['auth.User'], unique=True, primary_key=True))
-        # Adding unique constraint on 'WishList', fields ['user']
-        db.create_unique(u'webstore_wishlist', ['user_id'])
+        # Removing M2M table for field products on 'WishList'
+        db.delete_table(db.shorten_name(u'webstore_wishlist_products'))
 
 
     def backwards(self, orm):
-        # Removing unique constraint on 'WishList', fields ['user']
-        db.delete_unique(u'webstore_wishlist', ['user_id'])
+        # Adding model 'WishList'
+        db.create_table(u'webstore_wishlist', (
+            ('date_created', self.gf('django.db.models.fields.DateField')(default=datetime.datetime(2014, 7, 23, 0, 0))),
+            ('user', self.gf('django.db.models.fields.related.OneToOneField')(to=orm['auth.User'], unique=True, primary_key=True)),
+        ))
+        db.send_create_signal(u'webstore', ['WishList'])
 
-        # Adding field 'WishList.id'
-        db.add_column(u'webstore_wishlist', u'id',
-                      self.gf('django.db.models.fields.AutoField')(default=1, primary_key=True),
-                      keep_default=False)
+        # Adding M2M table for field products on 'WishList'
+        m2m_table_name = db.shorten_name(u'webstore_wishlist_products')
+        db.create_table(m2m_table_name, (
+            ('id', models.AutoField(verbose_name='ID', primary_key=True, auto_created=True)),
+            ('wishlist', models.ForeignKey(orm[u'webstore.wishlist'], null=False)),
+            ('product', models.ForeignKey(orm[u'webstore.product'], null=False))
+        ))
+        db.create_unique(m2m_table_name, ['wishlist_id', 'product_id'])
 
-
-        # Changing field 'WishList.user'
-        db.alter_column(u'webstore_wishlist', 'user_id', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['auth.User']))
 
     models = {
         u'auth.group': {
@@ -93,6 +95,7 @@ class Migration(SchemaMigration):
         u'webstore.coupon': {
             'Meta': {'object_name': 'Coupon', '_ormbases': [u'webstore.Promotion']},
             'code': ('django.db.models.fields.CharField', [], {'max_length': '20'}),
+            'first_order': ('django.db.models.fields.BooleanField', [], {}),
             u'promotion_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': u"orm['webstore.Promotion']", 'unique': 'True', 'primary_key': 'True'}),
             'volume': ('django.db.models.fields.PositiveIntegerField', [], {})
         },
@@ -106,7 +109,7 @@ class Migration(SchemaMigration):
         },
         u'webstore.discount': {
             'Meta': {'object_name': 'Discount', '_ormbases': [u'webstore.Promotion']},
-            'end_date': ('django.db.models.fields.DateField', [], {'default': 'datetime.datetime(2014, 7, 21, 0, 0)', 'null': 'True', 'blank': 'True'}),
+            'end_date': ('django.db.models.fields.DateField', [], {'default': 'datetime.datetime(2014, 8, 8, 0, 0)', 'null': 'True', 'blank': 'True'}),
             u'promotion_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': u"orm['webstore.Promotion']", 'unique': 'True', 'primary_key': 'True'})
         },
         u'webstore.product': {
@@ -125,7 +128,7 @@ class Migration(SchemaMigration):
             'name': ('django.db.models.fields.CharField', [], {'max_length': '100'}),
             'percent': ('django.db.models.fields.FloatField', [], {}),
             'products': ('django.db.models.fields.related.ManyToManyField', [], {'to': u"orm['webstore.Product']", 'symmetrical': 'False'}),
-            'start_date': ('django.db.models.fields.DateField', [], {'default': 'datetime.datetime(2014, 7, 21, 0, 0)'}),
+            'start_date': ('django.db.models.fields.DateField', [], {'default': 'datetime.datetime(2014, 8, 8, 0, 0)'}),
             'status': ('django.db.models.fields.CharField', [], {'default': "'1'", 'max_length': '1'})
         },
         u'webstore.rating': {
@@ -145,12 +148,6 @@ class Migration(SchemaMigration):
             'location': ('django.db.models.fields.CharField', [], {'max_length': '250', 'null': 'True', 'blank': 'True'}),
             'photo_url': ('django.db.models.fields.URLField', [], {'max_length': '200'}),
             'user': ('django.db.models.fields.related.OneToOneField', [], {'to': u"orm['auth.User']", 'unique': 'True'})
-        },
-        u'webstore.wishlist': {
-            'Meta': {'object_name': 'WishList'},
-            'date_created': ('django.db.models.fields.DateField', [], {'default': 'datetime.datetime(2014, 7, 21, 0, 0)'}),
-            'products': ('django.db.models.fields.related.ManyToManyField', [], {'to': u"orm['webstore.Product']", 'symmetrical': 'False'}),
-            'user': ('django.db.models.fields.related.OneToOneField', [], {'to': u"orm['auth.User']", 'unique': 'True', 'primary_key': 'True'})
         }
     }
 

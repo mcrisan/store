@@ -2,6 +2,9 @@ import datetime
 import json
 import ipdb
 
+from datetime import timedelta
+from django.contrib.contenttypes.models import ContentType
+from django.db.models import Max, Count
 from pprint import pprint
 from django.shortcuts import render, redirect
 from django.http import HttpResponse, HttpResponseRedirect
@@ -20,6 +23,7 @@ from paypal.standard.forms import PayPalPaymentsForm
 from paypal.standard.ipn.models import PayPalIPN
 from social_auth.models import UserSocialAuth
 from notifications import notify
+from notifications.models import Notification
 
 from .forms import (RegisterForm, CartForm, RatingForm, ProductRatingsForm , 
                    DeliveryDetailsForm, UserEditForm, SearchForm, DiscountCodeForm)
@@ -129,7 +133,10 @@ def product_rating(request):
             prod = Product.objects.get(pk=prod_id)
             rate = prod.product_rating()
             current_user = request.user
-            wish = prod.is_on_wishlist(request.user)
+            if check_user(request) is not None:
+                wish = prod.is_on_wishlist(request.user)  
+            else:
+                wish = False    
             try:
                 enable = current_user.has_ordered_product(prod_id)
             except AttributeError:
@@ -298,7 +305,6 @@ def checkout(request):
         messages.add_message(request, messages.INFO, 'We could not create your order order')
         return redirect('store_home')
 
-
 def delete_prod(request, prod_id):
     current_user = get_user(request)
     cart = current_user.active_cart()
@@ -410,7 +416,11 @@ def remove_from_wishlist(request, prod_id):
     return HttpResponse(json.dumps(context), content_type="application/json") 
 
 def wishlist_products(request, page=1): 
-    products = request.user.wishlist.products.all()
+    try:
+        products = request.user.wishlist.products.all()
+    except WishList.DoesNotExist:
+        messages.add_message(request, messages.INFO, 'You have no products on your wishlist')
+        products=""   
     prod = Paginator(products, options.products_per_page)
     context = { "products" : prod.page(page), "type" : 2, "page_nr" : page}
     return render(request, "wish_list.html", context)
